@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Live Cameras - CCTV Smart Monitor{% endblock %}
+{% block page_title %}Live Cameras{% endblock %}
+
+{% block content %}
+<div class="camera-grid">
+    {% if cameras %}
+        {% for cam in cameras %}
+        <div class="camera-card">
+            <div class="camera-header">
+                <h4>{{ cam.name }}</h4>
+                <span class="badge {{ 'badge-success' if cam.connected else 'badge-danger' }}">
+                    {{ 'Online' if cam.connected else 'Offline' }}
+                </span>
+            </div>
+            <div class="camera-feed">
+                {% if cam.connected %}
+                    <img src="/video_feed/{{ cam.name }}" alt="{{ cam.name }}" class="camera-stream">
+                {% else %}
+                    <div class="camera-offline">
+                        <i class="fas fa-video-slash fa-3x"></i>
+                        <p>Camera Offline</p>
+                    </div>
+                {% endif %}
+            </div>
+            <div class="camera-info">
+                <span><i class="fas fa-plug"></i> {{ cam.type }}</span>
+                <span><i class="fas fa-film"></i> {{ cam.frames_read }} frames</span>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="empty-state">
+            <i class="fas fa-camera-retro fa-4x"></i>
+            <h3>No Cameras Configured</h3>
+            <p>Edit config.yaml to add your CCTV cameras.</p>
+            <p>Supported: RTSP, USB Webcam, Video Files, HTTP Streams</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

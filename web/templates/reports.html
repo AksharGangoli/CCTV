@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Reports - CCTV Smart Monitor{% endblock %}
+{% block page_title %}Daily Reports{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h3><i class="fas fa-chart-bar"></i> Report History (Last 7 Days)</h3>
+        <button class="btn btn-primary" onclick="generateReport()">
+            <i class="fas fa-file-pdf"></i> Generate Now
+        </button>
+    </div>
+    <div class="card-body">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Visitors</th>
+                    <th>Vehicles</th>
+                    <th>Plates</th>
+                    <th>Alerts</th>
+                    <th>Entries</th>
+                    <th>Exits</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if reports %}
+                    {% for report in reports %}
+                    <tr>
+                        <td><strong>{{ report.get('date', 'N/A') }}</strong></td>
+                        <td>{{ report.get('total_visitors', 0) }}</td>
+                        <td>{{ report.get('vehicles_detected', 0) }}</td>
+                        <td>{{ report.get('plates_read', 0) }}</td>
+                        <td>{{ report.get('alerts_triggered', 0) }}</td>
+                        <td>{{ report.get('entries', 0) }}</td>
+                        <td>{{ report.get('exits', 0) }}</td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="7" class="text-center text-muted">
+                            No reports generated yet. Reports are auto-generated daily at 11:59 PM.
+                        </td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function generateReport() {
+    fetch('/api/report/generate', {method: 'POST'})
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                alert('Report generated successfully!');
+                location.reload();
+            }
+        });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+{% block title %}Dashboard - CCTV Smart Monitor{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+<!-- Stats Cards -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-icon blue"><i class="fas fa-user-circle"></i></div>
+        <div class="stat-info">
+            <h3>{{ summary.get('faces_detected', 0) }}</h3>
+            <p>Faces Detected</p>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon green"><i class="fas fa-car"></i></div>
+        <div class="stat-info">
+            <h3>{{ summary.get('vehicles_detected', 0) }}</h3>
+            <p>Vehicles</p>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon orange"><i class="fas fa-id-card"></i></div>
+        <div class="stat-info">
+            <h3>{{ summary.get('plates_detected', 0) }}</h3>
+            <p>Plates Read</p>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon red"><i class="fas fa-bell"></i></div>
+        <div class="stat-info">
+            <h3>{{ summary.get('events_triggered', 0) }}</h3>
+            <p>Alerts Today</p>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon teal"><i class="fas fa-sign-in-alt"></i></div>
+        <div class="stat-info">
+            <h3>{{ summary.get('entries', 0) }}</h3>
+            <p>Entries</p>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon purple"><i class="fas fa-sign-out-alt"></i></div>
+        <div class="stat-info">
+            <h3>{{ summary.get('exits', 0) }}</h3>
+            <p>Exits</p>
+        </div>
+    </div>
+</div>
+
+<!-- Camera Status & Alerts -->
+<div class="dashboard-grid">
+    <!-- Camera Status -->
+    <div class="card">
+        <div class="card-header">
+            <h3><i class="fas fa-camera"></i> Camera Status</h3>
+        </div>
+        <div class="card-body">
+            {% if cameras %}
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Camera</th>
+                            <th>Type</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for cam in cameras %}
+                        <tr>
+                            <td>{{ cam.name }}</td>
+                            <td>{{ cam.type }}</td>
+                            <td>
+                                {% if cam.connected %}
+                                    <span class="badge badge-success">Online</span>
+                                {% else %}
+                                    <span class="badge badge-danger">Offline</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <p class="text-muted">No cameras configured. Edit config.yaml to add cameras.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Recent Alerts -->
+    <div class="card">
+        <div class="card-header">
+            <h3><i class="fas fa-bell"></i> Recent Alerts</h3>
+        </div>
+        <div class="card-body">
+            {% if events %}
+                <div class="event-list">
+                    {% for event in events %}
+                    <div class="event-item severity-{{ event.get('severity', 'low') }}">
+                        <div class="event-icon">
+                            {% if event.severity == 'critical' %}
+                                <i class="fas fa-exclamation-circle"></i>
+                            {% elif event.severity == 'high' %}
+                                <i class="fas fa-exclamation-triangle"></i>
+                            {% else %}
+                                <i class="fas fa-info-circle"></i>
+                            {% endif %}
+                        </div>
+                        <div class="event-details">
+                            <p class="event-desc">{{ event.get('description', '') }}</p>
+                            <span class="event-time">{{ event.get('created_at', '') }}</span>
+                        </div>
+                        <button class="btn btn-sm" onclick="acknowledgeEvent({{ event.id }})">
+                            <i class="fas fa-check"></i>
+                        </button>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p class="text-muted text-center">No active alerts. All clear!</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Entry/Exit Counter -->
+<div class="card">
+    <div class="card-header">
+        <h3><i class="fas fa-door-open"></i> Entry/Exit Today</h3>
+    </div>
+    <div class="card-body">
+        <div class="entry-exit-display">
+            <div class="ee-stat entry">
+                <i class="fas fa-arrow-right"></i>
+                <span class="ee-number" id="entries-count">{{ summary.get('entries', 0) }}</span>
+                <span class="ee-label">Entries</span>
+            </div>
+            <div class="ee-stat inside">
+                <i class="fas fa-users"></i>
+                <span class="ee-number" id="inside-count">{{ summary.get('current_inside', 0) }}</span>
+                <span class="ee-label">Inside Now</span>
+            </div>
+            <div class="ee-stat exit">
+                <i class="fas fa-arrow-left"></i>
+                <span class="ee-number" id="exits-count">{{ summary.get('exits', 0) }}</span>
+                <span class="ee-label">Exits</span>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Auto-refresh stats every 5 seconds
+setInterval(function() {
+    fetch('/api/summary')
+        .then(r => r.json())
+        .then(data => {
+            document.getElementById('entries-count').textContent = data.entries || 0;
+            document.getElementById('exits-count').textContent = data.exits || 0;
+            document.getElementById('inside-count').textContent = data.current_inside || 0;
+        });
+}, 5000);
+
+function acknowledgeEvent(eventId) {
+    fetch(`/api/events/${eventId}/acknowledge`, {method: 'POST'})
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) location.reload();
+        });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}Settings - CCTV Smart Monitor{% endblock %}
+{% block page_title %}Settings{% endblock %}
+
+{% block content %}
+<div class="settings-grid">
+    <!-- System Info -->
+    <div class="card">
+        <div class="card-header"><h3><i class="fas fa-info-circle"></i> System Info</h3></div>
+        <div class="card-body">
+            <p><strong>Database Size:</strong> {{ storage_size }}</p>
+            <p><strong>Demo Mode:</strong> {{ 'Yes' if config.get('app', {}).get('demo_mode') else 'No' }}</p>
+            <p><strong>Country:</strong> {{ config.get('app', {}).get('country', 'india').title() }}</p>
+        </div>
+    </div>
+
+    <!-- Alert Testing -->
+    <div class="card">
+        <div class="card-header"><h3><i class="fas fa-bell"></i> Test Alerts</h3></div>
+        <div class="card-body">
+            <p>Test your alert connections:</p>
+            <button class="btn btn-primary" onclick="testTelegram()" style="margin: 5px;">
+                <i class="fab fa-telegram"></i> Test Telegram
+            </button>
+            <button class="btn btn-success" onclick="testWhatsApp()" style="margin: 5px;">
+                <i class="fab fa-whatsapp"></i> Test WhatsApp
+            </button>
+            <p id="test-result" style="margin-top: 10px;"></p>
+        </div>
+    </div>
+
+    <!-- Quick Guide -->
+    <div class="card">
+        <div class="card-header"><h3><i class="fas fa-book"></i> Quick Guide</h3></div>
+        <div class="card-body">
+            <ul class="guide-list">
+                <li><strong>Add Camera:</strong> Edit config.yaml → cameras section</li>
+                <li><strong>Add Known Face:</strong> Put photo in 'known_faces/' folder (name as person_name.jpg)</li>
+                <li><strong>Blacklist Person:</strong> Go to Faces → click Blacklist button</li>
+                <li><strong>Blacklist Vehicle:</strong> Go to Number Plates → click Ban button</li>
+                <li><strong>Setup Telegram:</strong> Get token from @BotFather, chat_id from @userinfobot</li>
+                <li><strong>View Reports:</strong> Go to Reports page (auto-generated daily)</li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function testTelegram() {
+    document.getElementById('test-result').textContent = 'Sending test message...';
+    fetch('/api/test/telegram', {method: 'POST'})
+        .then(r => r.json())
+        .then(data => {
+            document.getElementById('test-result').textContent = 
+                data.success ? '✓ Telegram test sent!' : '✗ Failed. Check config.yaml';
+        });
+}
+
+function testWhatsApp() {
+    document.getElementById('test-result').textContent = 'Sending test message...';
+    fetch('/api/test/whatsapp', {method: 'POST'})
+        .then(r => r.json())
+        .then(data => {
+            document.getElementById('test-result').textContent = 
+                data.success ? '✓ WhatsApp test sent!' : '✗ Failed. Check config.yaml';
+        });
+}
+</script>
+{% endblock %}

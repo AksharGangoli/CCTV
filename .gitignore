@@ -1,0 +1,52 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+venv/
+.venv/
+env/
+
+# Storage (local data - don't upload to git)
+storage/*.db
+storage/faces/
+storage/plates/
+recordings/*.mp4
+recordings/*.avi
+reports/*.pdf
+reports/*.json
+logs/*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Models (large files)
+*.pt
+*.pth
+*.onnx
+
+# Environment
+.env
+
+# Demo videos (too large for git)
+demo_videos/*.mp4
+demo_videos/*.avi
+demo_videos/*.mkv
+
+# Keep empty directories
+!storage/.gitkeep
+!recordings/.gitkeep
+!reports/.gitkeep
+!logs/.gitkeep
+!demo_videos/.gitkeep
+!known_faces/.gitkeep

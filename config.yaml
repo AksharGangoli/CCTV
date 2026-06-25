@@ -1,0 +1,229 @@
+# ============================================================
+# CCTV SMART MONITOR - CONFIGURATION FILE
+# ============================================================
+# This is your main settings file. Edit this to set up your system.
+# Don't worry - everything has comments explaining what to do!
+# ============================================================
+
+# --- GENERAL SETTINGS ---
+app:
+  name: "Smart CCTV Monitor"
+  # Set to true for first-time testing without real cameras
+  demo_mode: true
+  # Language for logs (english)
+  language: "en"
+  # How often to process frames (lower = faster but more CPU)
+  frame_skip: 3
+  # Country for number plate format
+  country: "india"
+
+# --- CAMERA SETTINGS ---
+# Add your cameras here. You can add as many as you want!
+# Types: rtsp, usb, file, http
+cameras:
+  # Example 1: IP Camera (RTSP)
+  - name: "Front Gate"
+    source: "rtsp://admin:password@192.168.1.100:554/stream1"
+    type: "rtsp"
+    enabled: true
+    # What to detect on this camera
+    detect_faces: true
+    detect_plates: true
+    detect_vehicles: true
+    detect_loitering: true
+    count_entry_exit: true
+
+  # Example 2: USB Webcam
+  - name: "Reception"
+    source: 0
+    type: "usb"
+    enabled: true
+    detect_faces: true
+    detect_plates: false
+    detect_vehicles: false
+    detect_loitering: true
+    count_entry_exit: true
+
+  # Example 3: Video File (for testing)
+  - name: "Demo Feed"
+    source: "demo_videos/sample.mp4"
+    type: "file"
+    enabled: true
+    detect_faces: true
+    detect_plates: true
+    detect_vehicles: true
+    detect_loitering: true
+    count_entry_exit: true
+
+# --- FACE RECOGNITION SETTINGS ---
+face_recognition:
+  # How similar a face needs to be to match (0.0 to 1.0, lower = stricter)
+  tolerance: 0.6
+  # Minimum face size to detect (pixels)
+  min_face_size: 20
+  # Save unknown faces for later identification
+  save_unknown_faces: true
+  # How many seconds before detecting same face again
+  cooldown_seconds: 30
+
+# --- NUMBER PLATE SETTINGS (INDIAN FORMAT) ---
+anpr:
+  # Indian plate format: XX 00 XX 0000
+  # Example: MH 12 AB 1234, KA 01 MA 5678
+  enabled: true
+  # Save plate images
+  save_plate_images: true
+  # Confidence threshold (0.0 to 1.0)
+  confidence: 0.5
+
+# --- VEHICLE DETECTION ---
+vehicle_detection:
+  enabled: true
+  # Types to detect
+  types:
+    - car
+    - motorcycle
+    - bus
+    - truck
+    - auto_rickshaw
+    - bicycle
+  # Detect helmet on two-wheelers
+  helmet_detection: true
+
+# --- THREAT/THEFT DETECTION ---
+threat_detection:
+  enabled: true
+  # Loitering: alert if someone stays too long
+  loitering:
+    enabled: true
+    # Time in seconds before alert
+    time_threshold: 120
+    # Area size to consider (pixels)
+    area_threshold: 100
+  # Motion detection sensitivity (0.0 to 1.0)
+  motion_sensitivity: 0.5
+  # Crowd detection
+  crowd:
+    enabled: true
+    # Max people allowed in frame
+    max_people: 10
+
+# --- ENTRY/EXIT COUNTING ---
+entry_exit:
+  enabled: true
+  # Line position for counting (percentage from top, 0.0 to 1.0)
+  line_position: 0.5
+  # Direction: "horizontal" or "vertical"
+  line_direction: "horizontal"
+  # Reset count at this time daily (24hr format)
+  daily_reset_time: "00:00"
+
+# --- NIGHT MODE ---
+night_mode:
+  enabled: true
+  # Auto-detect low light and enhance
+  auto_detect: true
+  # Manual schedule (24hr format)
+  schedule:
+    start: "18:00"
+    end: "06:00"
+  # Enhancement level (1=low, 2=medium, 3=high)
+  enhancement_level: 2
+
+# --- ALERTS ---
+alerts:
+  # Telegram Bot (FREE and recommended!)
+  telegram:
+    enabled: false
+    # How to get bot token: Message @BotFather on Telegram, type /newbot
+    bot_token: "YOUR_TELEGRAM_BOT_TOKEN"
+    # How to get chat_id: Message @userinfobot on Telegram
+    chat_id: "YOUR_CHAT_ID"
+    # Send photo with alert
+    send_photo: true
+
+  # WhatsApp (via Twilio - needs account)
+  whatsapp:
+    enabled: false
+    # Sign up at twilio.com (free trial available)
+    account_sid: "YOUR_TWILIO_ACCOUNT_SID"
+    auth_token: "YOUR_TWILIO_AUTH_TOKEN"
+    from_number: "whatsapp:+14155238886"
+    to_number: "whatsapp:+91XXXXXXXXXX"
+
+  # Sound Alert
+  sound:
+    enabled: true
+    # Play beep on threat detection
+    beep_on_threat: true
+
+  # Webhook (for custom integrations)
+  webhook:
+    enabled: false
+    url: "http://your-server.com/webhook"
+
+# --- DAILY SUMMARY REPORT ---
+daily_report:
+  enabled: true
+  # Time to generate report (24hr format)
+  generate_time: "23:59"
+  # Send via telegram
+  send_telegram: true
+  # Save as PDF
+  save_pdf: true
+  # Include stats
+  include:
+    - total_visitors
+    - unique_faces
+    - vehicles_detected
+    - plates_read
+    - alerts_triggered
+    - entry_exit_count
+    - peak_hours
+
+# --- STORAGE SETTINGS ---
+storage:
+  # Database file location
+  database: "storage/cctv_monitor.db"
+  # Where to save face thumbnails
+  faces_dir: "storage/faces"
+  # Where to save plate images
+  plates_dir: "storage/plates"
+  # Where to save event recordings
+  recordings_dir: "recordings"
+  # Auto-delete old data after X days (0 = never delete)
+  auto_cleanup_days: 30
+  # Max storage size in MB (0 = unlimited)
+  max_storage_mb: 5000
+  # Compress images to save space
+  compress_images: true
+  # JPEG quality (1-100, lower = smaller file)
+  image_quality: 60
+
+# --- WEB DASHBOARD ---
+web:
+  enabled: true
+  # Port to access dashboard
+  port: 5000
+  # Host (0.0.0.0 = accessible from other devices on network)
+  host: "0.0.0.0"
+  # Password protect dashboard
+  auth:
+    enabled: true
+    username: "admin"
+    password: "admin123"
+
+# --- VISITOR LOG ---
+visitor_log:
+  enabled: true
+  # Track repeat visitors
+  track_repeats: true
+  # Mark as "regular" after X visits
+  regular_threshold: 5
+  # Categories
+  categories:
+    - resident
+    - visitor
+    - delivery
+    - suspicious
+    - unknown

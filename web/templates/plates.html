@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block title %}Number Plates - CCTV Smart Monitor{% endblock %}
+{% block page_title %}Number Plates (ANPR){% endblock %}
+
+{% block content %}
+<!-- Search Bar -->
+<div class="search-bar">
+    <input type="text" id="plate-search" placeholder="Search plate number (e.g., MH 12 AB)" oninput="searchPlates()">
+    <button class="btn btn-primary" onclick="searchPlates()"><i class="fas fa-search"></i> Search</button>
+</div>
+
+<!-- Plates Table -->
+<div class="card">
+    <div class="card-body">
+        <table class="table" id="plates-table">
+            <thead>
+                <tr>
+                    <th>Plate Number</th>
+                    <th>State</th>
+                    <th>Vehicle Type</th>
+                    <th>Camera</th>
+                    <th>Time</th>
+                    <th>Confidence</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if plates %}
+                    {% for plate in plates %}
+                    <tr class="{{ 'row-danger' if plate.get('is_blacklisted') }}">
+                        <td><strong>{{ plate.get('plate_number', 'N/A') }}</strong></td>
+                        <td>{{ plate.get('state_code', '') }}</td>
+                        <td>{{ plate.get('vehicle_type', 'Unknown') }}</td>
+                        <td>{{ plate.get('camera_name', '') }}</td>
+                        <td>{{ plate.get('detected_at', '') }}</td>
+                        <td>{{ "%.0f%%"|format((plate.get('confidence', 0) or 0) * 100) }}</td>
+                        <td>
+                            {% if not plate.get('is_blacklisted') %}
+                            <button class="btn btn-sm btn-danger" onclick="blacklistPlate('{{ plate.plate_number }}')">
+                                <i class="fas fa-ban"></i>
+                            </button>
+                            {% else %}
+                            <span class="badge badge-danger">Blacklisted</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="7" class="text-center text-muted">
+                            No plates detected yet. Plates will appear when vehicles pass cameras.
+                        </td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function searchPlates() {
+    const query = document.getElementById('plate-search').value;
+    if (query.length < 2) return;
+    
+    fetch(`/api/plates/search?q=${encodeURIComponent(query)}`)
+        .then(r => r.json())
+        .then(plates => {
+            const tbody = document.querySelector('#plates-table tbody');
+            tbody.innerHTML = '';
+            plates.forEach(plate => {
+                tbody.innerHTML += `
+                    <tr class="${plate.is_blacklisted ? 'row-danger' : ''}">
+                        <td><strong>${plate.plate_number}</strong></td>
+                        <td>${plate.state_code || ''}</td>
+                        <td>${plate.vehicle_type || 'Unknown'}</td>
+                        <td>${plate.camera_name || ''}</td>
+                        <td>${plate.detected_at || ''}</td>
+                        <td>${Math.round((plate.confidence || 0) * 100)}%</td>
+                        <td><button class="btn btn-sm btn-danger" onclick="blacklistPlate('${plate.plate_number}')"><i class="fas fa-ban"></i></button></td>
+                    </tr>`;
+            });
+        });
+}
+
+function blacklistPlate(plateNumber) {
+    if (confirm(`Blacklist plate ${plateNumber}? You will get alerts when this vehicle is detected.`)) {
+        fetch(`/api/plates/${encodeURIComponent(plateNumber)}/blacklist`, {method: 'POST'})
+            .then(r => r.json()).then(data => {
+                if (data.success) location.reload();
+            });
+    }
+}
+</script>
+{% endblock %}

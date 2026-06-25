@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block title %}Face Management - CCTV Smart Monitor{% endblock %}
+{% block page_title %}Face Management{% endblock %}
+
+{% block content %}
+<!-- Filter Buttons -->
+<div class="filter-bar">
+    <button class="btn btn-sm active" onclick="filterFaces('all')">All</button>
+    <button class="btn btn-sm" onclick="filterFaces('resident')">Residents</button>
+    <button class="btn btn-sm" onclick="filterFaces('visitor')">Visitors</button>
+    <button class="btn btn-sm" onclick="filterFaces('suspicious')">Suspicious</button>
+    <button class="btn btn-sm" onclick="filterFaces('unknown')">Unknown</button>
+</div>
+
+<!-- Faces Grid -->
+<div class="faces-grid">
+    {% if faces %}
+        {% for face in faces %}
+        <div class="face-card category-{{ face.get('category', 'unknown') }}" data-category="{{ face.get('category', 'unknown') }}">
+            <div class="face-image">
+                {% if face.get('thumbnail_path') %}
+                    <img src="/static/faces/{{ face.thumbnail_path.split('/')[-1] }}" alt="Face" onerror="this.src='/static/images/no-face.png'">
+                {% else %}
+                    <div class="no-image"><i class="fas fa-user fa-2x"></i></div>
+                {% endif %}
+            </div>
+            <div class="face-info">
+                <h4 class="face-name">{{ face.get('name', 'Unknown') }}</h4>
+                <span class="badge badge-{{ face.get('category', 'unknown') }}">{{ face.get('category', 'unknown') }}</span>
+                <p class="face-meta">Seen {{ face.get('times_seen', 0) }} times</p>
+                <p class="face-meta">Last: {{ face.get('last_seen', 'N/A') }}</p>
+            </div>
+            <div class="face-actions">
+                <button class="btn btn-sm btn-primary" onclick="renameFace({{ face.id }}, '{{ face.get('name', '') }}')">
+                    <i class="fas fa-edit"></i> Rename
+                </button>
+                {% if not face.get('is_blacklisted') %}
+                <button class="btn btn-sm btn-danger" onclick="blacklistFace({{ face.id }})">
+                    <i class="fas fa-ban"></i> Blacklist
+                </button>
+                {% else %}
+                <button class="btn btn-sm btn-success" onclick="whitelistFace({{ face.id }})">
+                    <i class="fas fa-check"></i> Whitelist
+                </button>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="empty-state">
+            <i class="fas fa-user-circle fa-4x"></i>
+            <h3>No Faces Detected Yet</h3>
+            <p>Faces will appear here once cameras start detecting them.</p>
+            <p>You can also add known faces by placing photos in the 'known_faces/' folder.</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function filterFaces(category) {
+    document.querySelectorAll('.face-card').forEach(card => {
+        if (category === 'all' || card.dataset.category === category) {
+            card.style.display = 'block';
+        } else {
+            card.style.display = 'none';
+        }
+    });
+    document.querySelectorAll('.filter-bar .btn').forEach(b => b.classList.remove('active'));
+    event.target.classList.add('active');
+}
+
+function renameFace(faceId, currentName) {
+    const newName = prompt('Enter name for this person:', currentName);
+    if (newName) {
+        const category = prompt('Category (resident/visitor/delivery/suspicious):', 'visitor');
+        fetch(`/api/faces/${faceId}/rename`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({name: newName, category: category || 'visitor'})
+        }).then(r => r.json()).then(data => {
+            if (data.success) location.reload();
+        });
+    }
+}
+
+function blacklistFace(faceId) {
+    if (confirm('Are you sure you want to blacklist this person? You will get alerts when they are detected.')) {
+        fetch(`/api/faces/${faceId}/blacklist`, {method: 'POST'})
+            .then(r => r.json()).then(data => {
+                if (data.success) location.reload();
+            });
+    }
+}
+
+function whitelistFace(faceId) {
+    fetch(`/api/faces/${faceId}/whitelist`, {method: 'POST'})
+        .then(r => r.json()).then(data => {
+            if (data.success) location.reload();
+        });
+}
+</script>
+{% endblock %}
