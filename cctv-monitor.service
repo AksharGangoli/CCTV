@@ -1,0 +1,44 @@
+# ============================================================
+# CCTV Smart Monitor - Linux/Raspberry Pi Systemd Service
+# ============================================================
+# This file allows the CCTV monitor to run automatically at boot.
+#
+# INSTALLATION:
+#   sudo cp cctv-monitor.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable cctv-monitor
+#   sudo systemctl start cctv-monitor
+#
+# COMMANDS:
+#   sudo systemctl status cctv-monitor   # Check status
+#   sudo systemctl stop cctv-monitor     # Stop
+#   sudo systemctl restart cctv-monitor  # Restart
+#   journalctl -u cctv-monitor -f        # View logs
+#
+# NOTE: Edit WorkingDirectory and ExecStart paths below to match
+#       your installation location.
+# ============================================================
+
+[Unit]
+Description=CCTV Smart Monitor - AI Security System
+After=network.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# Change 'pi' to your username
+User=pi
+# Change this to your project folder path
+WorkingDirectory=/home/pi/CCTV
+# Change this to your Python/venv path
+ExecStart=/home/pi/CCTV/venv/bin/python3 main.py
+Restart=always
+RestartSec=10
+# Allow time for cameras to connect
+TimeoutStartSec=60
+# Environment variables
+Environment=DISPLAY=:0
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target

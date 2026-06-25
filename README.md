@@ -31,6 +31,7 @@ An open-source, self-hosted CCTV monitoring system that turns ordinary cameras i
 
 - [Quick Start](#quick-start)
 - [Windows Desktop App](#windows-desktop-app)
+- [Platform Support](#platform-support)
 - [Features Overview](#features-overview)
 - [Camera Setup](#camera-setup)
 - [Face Recognition](#face-recognition)
@@ -135,9 +136,217 @@ Or on Windows, double-click **`START_APP.bat`**
 
 | Method | Best For | How |
 |--------|----------|-----|
-| **Desktop App** | Daily use on your PC | `python desktop_app.py` or `START_APP.bat` |
+| **Desktop App** | Daily use on your PC (Windows/Mac/Linux) | `python desktop_app.py` or `START_APP.bat` |
 | **Web Dashboard** | Access from any device/phone | Open `http://localhost:5000` |
 | **Telegram Bot** | Quick checks from anywhere | Send commands to your bot |
+
+---
+
+## Platform Support
+
+This system runs on **Windows, macOS, Linux, and Raspberry Pi**. The desktop app and all detection features work on every platform.
+
+### Windows
+
+```bash
+# Install
+pip install -r requirements.txt
+
+# Run Desktop App (GUI)
+python desktop_app.py
+# Or double-click START_APP.bat
+
+# Run Console Mode
+python main.py
+
+# Build standalone EXE (no Python needed for end users)
+python build_exe.py
+```
+
+### macOS
+
+```bash
+# Install Homebrew (if not installed)
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+# Install Python & dependencies
+brew install python cmake
+pip3 install -r requirements.txt
+
+# Run Desktop App (GUI)
+python3 desktop_app.py
+
+# Run Console Mode
+python3 main.py
+
+# Create macOS App Bundle (optional)
+pip3 install py2app
+python3 setup_mac.py py2app
+```
+
+### Linux (Ubuntu/Debian)
+
+```bash
+# Install system dependencies
+sudo apt update
+sudo apt install -y python3 python3-pip python3-venv python3-tk
+sudo apt install -y cmake build-essential libopenblas-dev
+sudo apt install -y libgtk-3-dev libx11-dev
+
+# Setup
+bash setup.sh
+
+# Activate virtual environment
+source venv/bin/activate
+
+# Run Desktop App (GUI)
+python3 desktop_app.py
+
+# Run Console Mode
+python3 main.py
+
+# Run as background service (auto-start on boot)
+sudo cp cctv-monitor.service /etc/systemd/system/
+sudo systemctl enable cctv-monitor
+sudo systemctl start cctv-monitor
+```
+
+### Linux (Fedora/CentOS/RHEL)
+
+```bash
+# Install dependencies
+sudo dnf install -y python3 python3-pip python3-tkinter
+sudo dnf install -y cmake gcc-c++ openblas-devel
+
+# Setup
+bash setup.sh
+source venv/bin/activate
+
+# Run
+python3 desktop_app.py
+```
+
+### Raspberry Pi
+
+Works on **Raspberry Pi 4** (4GB RAM recommended) and **Raspberry Pi 5**.
+
+```bash
+# Update system
+sudo apt update && sudo apt upgrade -y
+
+# Install dependencies
+sudo apt install -y python3 python3-pip python3-venv python3-tk
+sudo apt install -y cmake build-essential libatlas-base-dev
+sudo apt install -y libhdf5-dev libharfbuzz-dev libopenjp2-7
+sudo apt install -y libgtk-3-dev libilmbase-dev libopenexr-dev
+
+# Setup
+bash setup.sh
+source venv/bin/activate
+
+# Run (headless - no GUI, web dashboard only)
+python3 main.py
+
+# Run with Desktop GUI (if Pi has monitor)
+python3 desktop_app.py
+
+# Run at boot (recommended for Pi)
+sudo cp cctv-monitor.service /etc/systemd/system/
+sudo systemctl enable cctv-monitor
+sudo systemctl start cctv-monitor
+```
+
+#### Raspberry Pi Performance Tips
+
+| Setting | Recommendation |
+|---------|---------------|
+| `frame_skip` | 7-10 (reduce CPU load) |
+| Camera streams | Use **sub-stream** (lower resolution) |
+| Vehicle detection (YOLO) | Disable if too slow (`detect_vehicles: false`) |
+| Max cameras on Pi 4 | 2-4 cameras |
+| Max cameras on Pi 5 | 4-6 cameras |
+| Swap file | Increase to 2GB: `sudo dphys-swapfile swapoff && sudo sed -i 's/CONF_SWAPSIZE=.*/CONF_SWAPSIZE=2048/' /etc/dphys-swapfile && sudo dphys-swapfile swapon` |
+| Cooling | Use heatsink + fan (AI detection heats up the Pi) |
+
+#### Raspberry Pi config.yaml tweaks
+
+```yaml
+app:
+  frame_skip: 8           # Higher = less CPU
+
+cameras:
+  - name: "Gate Camera"
+    source: "rtsp://admin:pass@192.168.1.100:554/Streaming/Channels/102"  # Sub-stream!
+    detect_faces: true
+    detect_plates: true
+    detect_vehicles: false   # Disable heavy YOLO on Pi
+    detect_loitering: true
+    detect_mask: true
+    count_entry_exit: true
+```
+
+---
+
+## Running as Background Service (Linux/Pi)
+
+Create a systemd service to auto-start on boot:
+
+```bash
+# Create service file
+sudo nano /etc/systemd/system/cctv-monitor.service
+```
+
+Paste this:
+
+```ini
+[Unit]
+Description=CCTV Smart Monitor
+After=network.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/CCTV
+ExecStart=/home/pi/CCTV/venv/bin/python3 main.py
+Restart=always
+RestartSec=10
+Environment=DISPLAY=:0
+
+[Install]
+WantedBy=multi-user.target
+```
+
+```bash
+# Enable and start
+sudo systemctl daemon-reload
+sudo systemctl enable cctv-monitor
+sudo systemctl start cctv-monitor
+
+# Check status
+sudo systemctl status cctv-monitor
+
+# View logs
+journalctl -u cctv-monitor -f
+```
+
+---
+
+## Accessing from Other Devices
+
+Once running on any platform, access from **any device** on your network:
+
+| Device | How to Access |
+|--------|--------------|
+| **Same PC** | `http://localhost:5000` |
+| **Phone (same WiFi)** | `http://YOUR_PC_IP:5000` |
+| **Tablet** | `http://YOUR_PC_IP:5000` |
+| **Other PC** | `http://YOUR_PC_IP:5000` |
+| **Outside home** | Use [Tailscale](https://tailscale.com) (free VPN) or port forwarding |
+
+Find your IP:
+- **Windows:** `ipconfig` → look for IPv4 Address
+- **Mac:** `ifconfig en0` → look for inet
+- **Linux/Pi:** `hostname -I`
 
 ---
 
@@ -449,20 +658,23 @@ Face data grows but slowly: 1000 unique faces = only **5 MB total** (stored fore
 
 | Component | Minimum | Recommended |
 |-----------|---------|-------------|
-| OS | Windows 10 / Ubuntu 20 / macOS | Windows 11 / Ubuntu 22 |
-| CPU | Intel i3 / Ryzen 3 | Intel i5 / Ryzen 5 |
+| OS | Windows 10 / Ubuntu 20 / macOS 12 / Pi OS 64-bit | Windows 11 / Ubuntu 22 / macOS 14 |
+| CPU | Intel i3 / Ryzen 3 / Pi 4 | Intel i5 / Ryzen 5 / Pi 5 |
 | RAM | 4 GB | 8-16 GB |
 | Storage | 10 GB free | 50 GB free |
 | Python | 3.8+ | 3.10+ |
 | Network | Same LAN as cameras | Gigabit LAN |
 
-### Performance by Camera Count
+### Performance by Platform & Camera Count
 
-| Cameras | Recommended `frame_skip` | CPU |
-|---------|--------------------------|-----|
-| 1-4 | 3 | i3 / Ryzen 3 |
-| 5-8 | 5 | i5 / Ryzen 5 |
-| 9-16 | 7 | i7 / Ryzen 7 |
+| Platform | Max Cameras | Recommended `frame_skip` |
+|----------|-------------|--------------------------|
+| Raspberry Pi 4 (4GB) | 2-4 | 8-10 |
+| Raspberry Pi 5 (8GB) | 4-6 | 5-7 |
+| Intel i3 / Budget PC | 4-6 | 3-5 |
+| Intel i5 / Mid PC | 8-10 | 3 |
+| Intel i7+ / Server | 12-16 | 2-3 |
+| Mac M1/M2/M3 | 8-12 | 3 |
 
 ---
 
