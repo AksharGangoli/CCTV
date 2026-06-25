@@ -603,22 +603,50 @@ class Database:
     # ========================
 
     def cleanup_old_data(self, days: int = 30):
-        """Delete data older than specified days to save space."""
+        """
+        Delete data older than specified days to save space.
+        IMPORTANT: Face data is NEVER deleted (lifetime storage).
+        Only cleans: events, entry_exit, vehicles, number_plates, daily_stats
+        """
         cutoff = (datetime.datetime.now() - datetime.timedelta(days=days)).isoformat()
         
-        tables = ['events', 'entry_exit', 'vehicles', 'number_plates']
-        for table in tables:
-            if table == 'entry_exit':
-                self.cursor.execute(f"DELETE FROM {table} WHERE timestamp < ?", (cutoff,))
-            elif table == 'events':
-                self.cursor.execute(f"DELETE FROM {table} WHERE created_at < ?", (cutoff,))
-            else:
-                self.cursor.execute(f"DELETE FROM {table} WHERE detected_at < ?", (cutoff,))
+        # NEVER delete faces - they are stored for lifetime
+        # Only delete transient data
+        tables_to_clean = {
+            'events': 'created_at',
+            'entry_exit': 'timestamp',
+            'vehicles': 'detected_at',
+            'number_plates': 'detected_at',
+            'daily_stats': 'date',
+        }
+        
+        total_deleted = 0
+        for table, time_column in tables_to_clean.items():
+            self.cursor.execute(
+                f"SELECT COUNT(*) as count FROM {table} WHERE {time_column} < ?",
+                (cutoff,)
+            )
+            count = self.cursor.fetchone()['count']
+            
+            if count > 0:
+                self.cursor.execute(
+                    f"DELETE FROM {table} WHERE {time_column} < ?",
+                    (cutoff,)
+                )
+                total_deleted += count
+                print(f"[DATABASE] Deleted {count} old records from {table}")
+        
+        # Also clean old visitor records BUT keep face references
+        # (visitors table links to faces, so we keep the face data)
         
         self.conn.commit()
-        # Reclaim space
+        
+        # Reclaim disk space
         self.cursor.execute("VACUUM")
-        print(f"[DATABASE] Cleaned up data older than {days} days")
+        
+        print(f"[DATABASE] Cleanup complete: {total_deleted} records removed")
+        print(f"[DATABASE] Face data preserved (lifetime storage)")
+        print(f"[DATABASE] Database size: {self.get_storage_size()}")
 
     def get_storage_size(self) -> str:
         """Get database file size in human-readable format."""

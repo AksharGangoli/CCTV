@@ -349,3 +349,113 @@ body {
     .stats-grid { grid-template-columns: repeat(2, 1fr); }
     .camera-grid { grid-template-columns: 1fr; }
 }
+
+
+
+/* ============== SETTINGS - CAMERA CONFIG ============== */
+.full-width { grid-column: 1 / -1; }
+.camera-config-item {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin-bottom: 12px;
+    overflow: hidden;
+}
+.cam-config-header {
+    padding: 12px 15px;
+    background: #f8fafc;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border);
+}
+.cam-config-header h4 { font-size: 0.95rem; margin: 0; }
+.cam-config-body { padding: 12px 15px; }
+.cam-config-row { margin-bottom: 5px; font-size: 0.85rem; }
+.cam-label { color: var(--gray); margin-right: 8px; }
+.cam-value { color: var(--dark); }
+
+.cam-toggles {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 10px;
+}
+.toggle-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    background: #f1f5f9;
+    padding: 5px 10px;
+    border-radius: 6px;
+}
+.toggle-item input[type="checkbox"] { cursor: pointer; }
+.toggle-item input:checked + span { color: var(--primary); font-weight: 500; }
+
+/* ============== GLOBAL TOGGLES ============== */
+.global-toggles { display: flex; flex-direction: column; gap: 15px; }
+.toggle-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+}
+.toggle-row span { font-size: 0.95rem; }
+.toggle-hint { font-size: 0.8rem; color: var(--gray); margin-top: -10px; padding-left: 5px; }
+
+/* Toggle Switch */
+.switch { position: relative; display: inline-block; width: 48px; height: 26px; }
+.switch input { opacity: 0; width: 0; height: 0; }
+.slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .3s; }
+.slider.round { border-radius: 26px; }
+.slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 3px; bottom: 3px; background-color: white; transition: .3s; border-radius: 50%; }
+input:checked + .slider { background-color: var(--primary); }
+input:checked + .slider:before { transform: translateX(22px); }
+
+/* ============== MODAL ============== */
+.modal {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.5); z-index: 1000;
+    display: flex; align-items: center; justify-content: center;
+}
+.modal-content {
+    background: white; border-radius: 12px; padding: 25px;
+    width: 90%; max-width: 500px; max-height: 80vh; overflow-y: auto;
+}
+.modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.modal-header h3 { margin: 0; }
+
+
+
+/* ============== INFO BANNER ============== */
+.info-banner {
+    background: #dbeafe;
+    border: 1px solid #93c5fd;
+    border-radius: 8px;
+    padding: 12px 18px;
+    margin-bottom: 20px;
+    font-size: 0.9rem;
+    color: #1e40af;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.info-banner i { font-size: 1.1rem; }
+
+/* Face NEW badge */
+.face-new-badge {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    background: var(--danger);
+    color: white;
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+.face-image { position: relative; }
+.face-card { cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; }
+.face-card:hover { transform: translateY(-3px); box-shadow: 0 5px 20px rgba(0,0,0,0.1); }

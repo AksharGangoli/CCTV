@@ -4,13 +4,126 @@
 
 {% block content %}
 <div class="settings-grid">
+
+    <!-- Camera Management -->
+    <div class="card full-width">
+        <div class="card-header">
+            <h3><i class="fas fa-camera"></i> Camera Management (1-16 Channels)</h3>
+            <button class="btn btn-primary" onclick="addCamera()">
+                <i class="fas fa-plus"></i> Add Camera
+            </button>
+        </div>
+        <div class="card-body">
+            <p class="text-muted" style="margin-bottom:15px;">Configure up to 16 cameras. Toggle detections per camera based on use case.</p>
+            <div id="camera-list">
+                {% if cameras_config %}
+                    {% for cam in cameras_config %}
+                    <div class="camera-config-item" id="cam-{{ loop.index }}">
+                        <div class="cam-config-header">
+                            <h4>{{ cam.name }}</h4>
+                            <div>
+                                <span class="badge {{ 'badge-success' if cam.enabled else 'badge-danger' }}">
+                                    {{ 'Enabled' if cam.enabled else 'Disabled' }}
+                                </span>
+                                <button class="btn btn-sm btn-danger" onclick="removeCamera({{ loop.index0 }}, '{{ cam.name }}')">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="cam-config-body">
+                            <div class="cam-config-row">
+                                <span class="cam-label">Source:</span>
+                                <span class="cam-value">{{ cam.source }}</span>
+                            </div>
+                            <div class="cam-config-row">
+                                <span class="cam-label">Type:</span>
+                                <span class="cam-value">{{ cam.type }}</span>
+                            </div>
+                            <div class="cam-toggles">
+                                <label class="toggle-item">
+                                    <input type="checkbox" {{ 'checked' if cam.detect_faces }} onchange="toggleDetection({{ loop.index0 }}, 'detect_faces', this.checked)">
+                                    <span>Faces</span>
+                                </label>
+                                <label class="toggle-item">
+                                    <input type="checkbox" {{ 'checked' if cam.detect_plates }} onchange="toggleDetection({{ loop.index0 }}, 'detect_plates', this.checked)">
+                                    <span>Plates</span>
+                                </label>
+                                <label class="toggle-item">
+                                    <input type="checkbox" {{ 'checked' if cam.detect_vehicles }} onchange="toggleDetection({{ loop.index0 }}, 'detect_vehicles', this.checked)">
+                                    <span>Vehicles</span>
+                                </label>
+                                <label class="toggle-item">
+                                    <input type="checkbox" {{ 'checked' if cam.detect_loitering }} onchange="toggleDetection({{ loop.index0 }}, 'detect_loitering', this.checked)">
+                                    <span>Loitering</span>
+                                </label>
+                                <label class="toggle-item">
+                                    <input type="checkbox" {{ 'checked' if cam.get('detect_mask', false) }} onchange="toggleDetection({{ loop.index0 }}, 'detect_mask', this.checked)">
+                                    <span>Mask Alert</span>
+                                </label>
+                                <label class="toggle-item">
+                                    <input type="checkbox" {{ 'checked' if cam.count_entry_exit }} onchange="toggleDetection({{ loop.index0 }}, 'count_entry_exit', this.checked)">
+                                    <span>Entry/Exit</span>
+                                </label>
+                                <label class="toggle-item">
+                                    <input type="checkbox" {{ 'checked' if cam.enabled }} onchange="toggleDetection({{ loop.index0 }}, 'enabled', this.checked)">
+                                    <span><strong>Camera ON</strong></span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted">No cameras configured. Click "Add Camera" to get started.</p>
+                {% endif %}
+            </div>
+            <p class="text-muted" style="margin-top:10px;"><i class="fas fa-info-circle"></i> Changes are saved automatically.</p>
+        </div>
+    </div>
+
+    <!-- Global Toggles -->
+    <div class="card">
+        <div class="card-header"><h3><i class="fas fa-sliders-h"></i> Global Detection Toggles</h3></div>
+        <div class="card-body">
+            <div class="global-toggles">
+                <label class="toggle-row">
+                    <span><i class="fas fa-hard-hat"></i> Helmet Detection</span>
+                    <label class="switch">
+                        <input type="checkbox" id="helmet-toggle" {{ 'checked' if helmet_enabled }} onchange="toggleGlobal('helmet_detection', this.checked)">
+                        <span class="slider round"></span>
+                    </label>
+                </label>
+                <p class="toggle-hint">Detect if two-wheeler riders are wearing helmets. Default: OFF</p>
+
+                <label class="toggle-row">
+                    <span><i class="fas fa-mask"></i> Mask Detection Alerts</span>
+                    <label class="switch">
+                        <input type="checkbox" id="mask-toggle" {{ 'checked' if mask_enabled }} onchange="toggleGlobal('mask_detection', this.checked)">
+                        <span class="slider round"></span>
+                    </label>
+                </label>
+                <p class="toggle-hint">Send photo alert when masked person detected</p>
+
+                <label class="toggle-row">
+                    <span><i class="fas fa-moon"></i> Night Mode</span>
+                    <label class="switch">
+                        <input type="checkbox" id="night-toggle" {{ 'checked' if night_enabled }} onchange="toggleGlobal('night_mode', this.checked)">
+                        <span class="slider round"></span>
+                    </label>
+                </label>
+                <p class="toggle-hint">Auto-enhance dark/low-light footage</p>
+            </div>
+        </div>
+    </div>
+
     <!-- System Info -->
     <div class="card">
         <div class="card-header"><h3><i class="fas fa-info-circle"></i> System Info</h3></div>
         <div class="card-body">
             <p><strong>Database Size:</strong> {{ storage_size }}</p>
+            <p><strong>Cameras Active:</strong> {{ active_cameras }} / {{ total_cameras }}</p>
             <p><strong>Demo Mode:</strong> {{ 'Yes' if config.get('app', {}).get('demo_mode') else 'No' }}</p>
-            <p><strong>Country:</strong> {{ config.get('app', {}).get('country', 'india').title() }}</p>
+            <p><strong>Face Storage:</strong> Lifetime (never deleted)</p>
+            <p><strong>Other Data Cleanup:</strong> {{ config.get('storage', {}).get('auto_cleanup_days', 30) }} days</p>
         </div>
     </div>
 
@@ -18,7 +131,6 @@
     <div class="card">
         <div class="card-header"><h3><i class="fas fa-bell"></i> Test Alerts</h3></div>
         <div class="card-body">
-            <p>Test your alert connections:</p>
             <button class="btn btn-primary" onclick="testTelegram()" style="margin: 5px;">
                 <i class="fab fa-telegram"></i> Test Telegram
             </button>
@@ -26,6 +138,20 @@
                 <i class="fab fa-whatsapp"></i> Test WhatsApp
             </button>
             <p id="test-result" style="margin-top: 10px;"></p>
+            <hr style="margin: 15px 0;">
+            <h4>Telegram Commands (Two-Way)</h4>
+            <p class="text-muted">Send these commands to your Telegram bot:</p>
+            <ul class="guide-list">
+                <li><code>/status</code> - Get system status</li>
+                <li><code>/summary</code> - Today's summary</li>
+                <li><code>/cameras</code> - Camera status</li>
+                <li><code>/count</code> - Entry/exit count</li>
+                <li><code>/alerts</code> - Recent alerts</li>
+                <li><code>/faces</code> - Face stats</li>
+                <li><code>/plates</code> - Recent plates</li>
+                <li><code>/report</code> - Generate daily report now</li>
+                <li><code>/help</code> - Show all commands</li>
+            </ul>
         </div>
     </div>
 
@@ -34,38 +160,136 @@
         <div class="card-header"><h3><i class="fas fa-book"></i> Quick Guide</h3></div>
         <div class="card-body">
             <ul class="guide-list">
-                <li><strong>Add Camera:</strong> Edit config.yaml → cameras section</li>
-                <li><strong>Add Known Face:</strong> Put photo in 'known_faces/' folder (name as person_name.jpg)</li>
-                <li><strong>Blacklist Person:</strong> Go to Faces → click Blacklist button</li>
-                <li><strong>Blacklist Vehicle:</strong> Go to Number Plates → click Ban button</li>
-                <li><strong>Setup Telegram:</strong> Get token from @BotFather, chat_id from @userinfobot</li>
-                <li><strong>View Reports:</strong> Go to Reports page (auto-generated daily)</li>
+                <li><strong>Add Camera:</strong> Click "Add Camera" button above</li>
+                <li><strong>Toggle Detection:</strong> Use checkboxes on each camera</li>
+                <li><strong>Add Known Face:</strong> Faces auto-save → go to Faces page to rename</li>
+                <li><strong>Helmet Detection:</strong> Toggle ON/OFF in Global Toggles above</li>
+                <li><strong>Blacklist Person:</strong> Faces page → click Blacklist</li>
+                <li><strong>Blacklist Vehicle:</strong> Plates page → click Ban</li>
+                <li><strong>Telegram Bot:</strong> Send /help to your bot for commands</li>
             </ul>
         </div>
+    </div>
+</div>
+
+<!-- Add Camera Modal -->
+<div id="add-camera-modal" class="modal" style="display:none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3><i class="fas fa-plus-circle"></i> Add New Camera</h3>
+            <button class="btn btn-sm" onclick="closeModal()">&times;</button>
+        </div>
+        <form id="add-camera-form" onsubmit="submitNewCamera(event)">
+            <div class="form-group">
+                <label>Camera Name</label>
+                <input type="text" name="name" placeholder="e.g., CH5 - Corridor" required>
+            </div>
+            <div class="form-group">
+                <label>Source (RTSP URL / USB index / File path)</label>
+                <input type="text" name="source" placeholder="rtsp://admin:pass@192.168.1.105:554/stream1" required>
+            </div>
+            <div class="form-group">
+                <label>Type</label>
+                <select name="type">
+                    <option value="rtsp">RTSP (IP Camera)</option>
+                    <option value="usb">USB Webcam</option>
+                    <option value="file">Video File</option>
+                    <option value="http">HTTP Stream</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>What to detect on this camera:</label>
+                <div class="cam-toggles">
+                    <label class="toggle-item"><input type="checkbox" name="detect_faces" checked><span>Faces</span></label>
+                    <label class="toggle-item"><input type="checkbox" name="detect_plates"><span>Plates</span></label>
+                    <label class="toggle-item"><input type="checkbox" name="detect_vehicles"><span>Vehicles</span></label>
+                    <label class="toggle-item"><input type="checkbox" name="detect_loitering" checked><span>Loitering</span></label>
+                    <label class="toggle-item"><input type="checkbox" name="detect_mask" checked><span>Mask Alert</span></label>
+                    <label class="toggle-item"><input type="checkbox" name="count_entry_exit"><span>Entry/Exit</span></label>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary btn-block">
+                <i class="fas fa-plus"></i> Add Camera
+            </button>
+        </form>
     </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-function testTelegram() {
-    document.getElementById('test-result').textContent = 'Sending test message...';
-    fetch('/api/test/telegram', {method: 'POST'})
-        .then(r => r.json())
-        .then(data => {
-            document.getElementById('test-result').textContent = 
-                data.success ? '✓ Telegram test sent!' : '✗ Failed. Check config.yaml';
+function addCamera() {
+    document.getElementById('add-camera-modal').style.display = 'flex';
+}
+function closeModal() {
+    document.getElementById('add-camera-modal').style.display = 'none';
+}
+
+function submitNewCamera(e) {
+    e.preventDefault();
+    const form = e.target;
+    const data = {
+        name: form.name.value,
+        source: form.source.value,
+        type: form.type.value,
+        enabled: true,
+        detect_faces: form.detect_faces.checked,
+        detect_plates: form.detect_plates.checked,
+        detect_vehicles: form.detect_vehicles.checked,
+        detect_loitering: form.detect_loitering.checked,
+        detect_mask: form.detect_mask.checked,
+        count_entry_exit: form.count_entry_exit.checked
+    };
+    fetch('/api/cameras/add', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(data)})
+        .then(r => r.json()).then(d => {
+            if(d.success) { closeModal(); location.reload(); }
+            else alert(d.error || 'Failed to add camera');
         });
 }
 
+function removeCamera(index, name) {
+    if(confirm(`Remove camera "${name}"? This cannot be undone.`)) {
+        fetch('/api/cameras/remove', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({index: index})})
+            .then(r => r.json()).then(d => { if(d.success) location.reload(); });
+    }
+}
+
+function toggleDetection(camIndex, field, value) {
+    fetch('/api/cameras/toggle', {method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({index: camIndex, field: field, value: value})
+    }).then(r => r.json()).then(d => {
+        if(!d.success) alert('Failed to update');
+    });
+}
+
+function toggleGlobal(feature, value) {
+    fetch('/api/settings/toggle', {method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({feature: feature, value: value})
+    }).then(r => r.json()).then(d => {
+        if(d.success) showToast(feature.replace('_',' ') + (value ? ' enabled' : ' disabled'), 'success');
+        else alert('Failed');
+    });
+}
+
+function testTelegram() {
+    document.getElementById('test-result').textContent = 'Sending...';
+    fetch('/api/test/telegram', {method:'POST'}).then(r=>r.json()).then(d=>{
+        document.getElementById('test-result').textContent = d.success ? '✓ Telegram sent!' : '✗ Failed';
+    });
+}
 function testWhatsApp() {
-    document.getElementById('test-result').textContent = 'Sending test message...';
-    fetch('/api/test/whatsapp', {method: 'POST'})
-        .then(r => r.json())
-        .then(data => {
-            document.getElementById('test-result').textContent = 
-                data.success ? '✓ WhatsApp test sent!' : '✗ Failed. Check config.yaml';
-        });
+    document.getElementById('test-result').textContent = 'Sending...';
+    fetch('/api/test/whatsapp', {method:'POST'}).then(r=>r.json()).then(d=>{
+        document.getElementById('test-result').textContent = d.success ? '✓ WhatsApp sent!' : '✗ Failed';
+    });
+}
+
+function showToast(msg, type) {
+    const t = document.createElement('div');
+    t.textContent = msg;
+    t.style.cssText = 'position:fixed;bottom:20px;right:20px;padding:12px 20px;border-radius:8px;color:white;z-index:9999;font-size:0.9rem;background:' + (type==='success'?'#10b981':'#ef4444');
+    document.body.appendChild(t);
+    setTimeout(()=>t.remove(), 3000);
 }
 </script>
 {% endblock %}

@@ -44,7 +44,9 @@ from detectors.plate_detector import PlateDetector
 from detectors.vehicle_detector import VehicleDetector
 from detectors.threat_detector import ThreatDetector
 from detectors.entry_exit_counter import EntryExitCounter
+from detectors.mask_detector import MaskDetector
 from alerts.alert_manager import AlertManager
+from alerts.telegram_bot import TelegramBot
 
 
 class CCTVMonitor:
@@ -122,9 +124,21 @@ class CCTVMonitor:
         # 9. Alert Manager
         self.alert_manager = AlertManager(self.config.get('alerts', {}))
         
-        # 10. Report Generator
+        # 10. Mask Detector
+        self.mask_detector = MaskDetector(
+            self.db, self.config.get('mask_detection', {}), self.alert_manager
+        )
+        
+        # 11. Report Generator
         self.report_generator = ReportGenerator(
             self.db, self.config.get('daily_report', {}), self.alert_manager
+        )
+        
+        # 12. Telegram Two-Way Bot
+        self.telegram_bot = TelegramBot(
+            self.config.get('alerts', {}).get('telegram', {}),
+            db=self.db,
+            monitor=self
         )
         
         # Setup cameras
@@ -201,6 +215,9 @@ class CCTVMonitor:
         
         # Start alert system
         self.alert_manager.start()
+        
+        # Start Telegram two-way bot
+        self.telegram_bot.start()
         
         # Start web dashboard in background
         web_thread = threading.Thread(target=self._start_web_dashboard, daemon=True)
@@ -338,6 +355,14 @@ class CCTVMonitor:
                         self.entry_exit_counter.process_frame(
                             frame, face_results, camera_name
                         )
+                    
+                    # Mask Detection
+                    if cam_config.get('detect_mask', True):
+                        face_locs = [f['location'] for f in face_results 
+                                    if not f.get('in_cooldown')]
+                        self.mask_detector.detect_masks(
+                            frame, camera_name, face_locations=face_locs
+                        )
                 
                 # Small delay to prevent CPU overload
                 time.sleep(0.01)
@@ -389,17 +414,22 @@ class CCTVMonitor:
             time.sleep(30)  # Check every 30 seconds
 
     def _cleanup_scheduler(self):
-        """Schedule periodic storage cleanup."""
+        """Schedule periodic storage cleanup. Faces are NEVER deleted."""
         storage_config = self.config.get('storage', {})
         cleanup_days = storage_config.get('auto_cleanup_days', 30)
         
         if cleanup_days <= 0:
+            print("[CLEANUP] Auto-cleanup disabled (set to 0)")
             return  # Cleanup disabled
+        
+        print(f"[CLEANUP] Auto-cleanup enabled: delete non-face data after {cleanup_days} days")
+        print(f"[CLEANUP] Face data: LIFETIME (never deleted)")
         
         while self._running:
             # Run cleanup once per day at 3 AM
             now = datetime.now()
             if now.hour == 3 and now.minute == 0:
+                print("[CLEANUP] Running scheduled cleanup...")
                 self.db.cleanup_old_data(cleanup_days)
                 time.sleep(61)
             time.sleep(30)
@@ -415,6 +445,9 @@ class CCTVMonitor:
         
         # Stop alerts
         self.alert_manager.stop()
+        
+        # Stop Telegram bot
+        self.telegram_bot.stop()
         
         # Generate final report
         try:

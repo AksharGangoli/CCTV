@@ -3,44 +3,54 @@
 {% block page_title %}Face Management{% endblock %}
 
 {% block content %}
+<!-- Info Banner -->
+<div class="info-banner">
+    <i class="fas fa-info-circle"></i>
+    <span>Faces are <strong>auto-saved</strong> when detected. Click any face to <strong>rename</strong> it. Face data is stored <strong>forever</strong> (never auto-deleted).</span>
+</div>
+
 <!-- Filter Buttons -->
 <div class="filter-bar">
-    <button class="btn btn-sm active" onclick="filterFaces('all')">All</button>
+    <button class="btn btn-sm active" onclick="filterFaces('all')">All ({{ faces|length }})</button>
+    <button class="btn btn-sm" onclick="filterFaces('unknown')">Unknown</button>
     <button class="btn btn-sm" onclick="filterFaces('resident')">Residents</button>
     <button class="btn btn-sm" onclick="filterFaces('visitor')">Visitors</button>
+    <button class="btn btn-sm" onclick="filterFaces('delivery')">Delivery</button>
     <button class="btn btn-sm" onclick="filterFaces('suspicious')">Suspicious</button>
-    <button class="btn btn-sm" onclick="filterFaces('unknown')">Unknown</button>
 </div>
 
 <!-- Faces Grid -->
 <div class="faces-grid">
     {% if faces %}
         {% for face in faces %}
-        <div class="face-card category-{{ face.get('category', 'unknown') }}" data-category="{{ face.get('category', 'unknown') }}">
+        <div class="face-card category-{{ face.get('category', 'unknown') }}" data-category="{{ face.get('category', 'unknown') }}" onclick="openFaceEditor({{ face.id }}, '{{ face.get('name', 'Unknown') }}', '{{ face.get('category', 'unknown') }}')">
             <div class="face-image">
                 {% if face.get('thumbnail_path') %}
-                    <img src="/static/faces/{{ face.thumbnail_path.split('/')[-1] }}" alt="Face" onerror="this.src='/static/images/no-face.png'">
+                    <img src="/static/faces/{{ face.thumbnail_path.split('/')[-1] }}" alt="Face" onerror="this.parentElement.innerHTML='<div class=no-image><i class=\'fas fa-user fa-2x\'></i></div>'">
                 {% else %}
                     <div class="no-image"><i class="fas fa-user fa-2x"></i></div>
+                {% endif %}
+                {% if face.get('name', 'Unknown') == 'Unknown' %}
+                <div class="face-new-badge">NEW</div>
                 {% endif %}
             </div>
             <div class="face-info">
                 <h4 class="face-name">{{ face.get('name', 'Unknown') }}</h4>
                 <span class="badge badge-{{ face.get('category', 'unknown') }}">{{ face.get('category', 'unknown') }}</span>
                 <p class="face-meta">Seen {{ face.get('times_seen', 0) }} times</p>
-                <p class="face-meta">Last: {{ face.get('last_seen', 'N/A') }}</p>
+                <p class="face-meta">{{ face.get('camera_name', '') }}</p>
             </div>
-            <div class="face-actions">
-                <button class="btn btn-sm btn-primary" onclick="renameFace({{ face.id }}, '{{ face.get('name', '') }}')">
-                    <i class="fas fa-edit"></i> Rename
+            <div class="face-actions" onclick="event.stopPropagation()">
+                <button class="btn btn-sm btn-primary" onclick="openFaceEditor({{ face.id }}, '{{ face.get('name', 'Unknown') }}', '{{ face.get('category', 'unknown') }}')">
+                    <i class="fas fa-edit"></i> Name
                 </button>
                 {% if not face.get('is_blacklisted') %}
                 <button class="btn btn-sm btn-danger" onclick="blacklistFace({{ face.id }})">
-                    <i class="fas fa-ban"></i> Blacklist
+                    <i class="fas fa-ban"></i>
                 </button>
                 {% else %}
                 <button class="btn btn-sm btn-success" onclick="whitelistFace({{ face.id }})">
-                    <i class="fas fa-check"></i> Whitelist
+                    <i class="fas fa-check"></i>
                 </button>
                 {% endif %}
             </div>
@@ -50,10 +60,43 @@
         <div class="empty-state">
             <i class="fas fa-user-circle fa-4x"></i>
             <h3>No Faces Detected Yet</h3>
-            <p>Faces will appear here once cameras start detecting them.</p>
-            <p>You can also add known faces by placing photos in the 'known_faces/' folder.</p>
+            <p>Faces are automatically saved when cameras detect them.</p>
+            <p>Once detected, you can name them here.</p>
         </div>
     {% endif %}
+</div>
+
+<!-- Face Editor Modal -->
+<div id="face-editor-modal" class="modal" style="display:none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3><i class="fas fa-user-edit"></i> Name This Person</h3>
+            <button class="btn btn-sm" onclick="closeFaceEditor()">&times;</button>
+        </div>
+        <form id="face-editor-form" onsubmit="saveFaceName(event)">
+            <input type="hidden" id="edit-face-id">
+            <div class="form-group">
+                <label>Person's Name</label>
+                <input type="text" id="edit-face-name" placeholder="e.g., Rahul Sharma" required autofocus>
+            </div>
+            <div class="form-group">
+                <label>Category</label>
+                <select id="edit-face-category">
+                    <option value="resident">Resident (Family/Staff)</option>
+                    <option value="visitor">Visitor</option>
+                    <option value="delivery">Delivery Person</option>
+                    <option value="suspicious">Suspicious</option>
+                    <option value="unknown">Unknown</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <p class="text-muted"><i class="fas fa-lightbulb"></i> Tip: Once named, the system will recognize this person automatically next time!</p>
+            </div>
+            <button type="submit" class="btn btn-primary btn-block">
+                <i class="fas fa-save"></i> Save Name
+            </button>
+        </form>
+    </div>
 </div>
 {% endblock %}
 
@@ -71,22 +114,42 @@ function filterFaces(category) {
     event.target.classList.add('active');
 }
 
-function renameFace(faceId, currentName) {
-    const newName = prompt('Enter name for this person:', currentName);
-    if (newName) {
-        const category = prompt('Category (resident/visitor/delivery/suspicious):', 'visitor');
-        fetch(`/api/faces/${faceId}/rename`, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({name: newName, category: category || 'visitor'})
-        }).then(r => r.json()).then(data => {
-            if (data.success) location.reload();
-        });
-    }
+function openFaceEditor(faceId, currentName, currentCategory) {
+    document.getElementById('edit-face-id').value = faceId;
+    document.getElementById('edit-face-name').value = currentName === 'Unknown' ? '' : currentName;
+    document.getElementById('edit-face-category').value = currentCategory;
+    document.getElementById('face-editor-modal').style.display = 'flex';
+    document.getElementById('edit-face-name').focus();
+}
+
+function closeFaceEditor() {
+    document.getElementById('face-editor-modal').style.display = 'none';
+}
+
+function saveFaceName(e) {
+    e.preventDefault();
+    const faceId = document.getElementById('edit-face-id').value;
+    const name = document.getElementById('edit-face-name').value.trim();
+    const category = document.getElementById('edit-face-category').value;
+
+    if (!name) { alert('Please enter a name'); return; }
+
+    fetch(`/api/faces/${faceId}/rename`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({name: name, category: category})
+    }).then(r => r.json()).then(data => {
+        if (data.success) {
+            closeFaceEditor();
+            location.reload();
+        } else {
+            alert(data.error || 'Failed to save');
+        }
+    });
 }
 
 function blacklistFace(faceId) {
-    if (confirm('Are you sure you want to blacklist this person? You will get alerts when they are detected.')) {
+    if (confirm('Blacklist this person? You will get INSTANT alerts when they are detected.')) {
         fetch(`/api/faces/${faceId}/blacklist`, {method: 'POST'})
             .then(r => r.json()).then(data => {
                 if (data.success) location.reload();
@@ -95,10 +158,19 @@ function blacklistFace(faceId) {
 }
 
 function whitelistFace(faceId) {
-    fetch(`/api/faces/${faceId}/whitelist`, {method: 'POST'})
-        .then(r => r.json()).then(data => {
-            if (data.success) location.reload();
-        });
+    if (confirm('Remove from blacklist?')) {
+        fetch(`/api/faces/${faceId}/whitelist`, {method: 'POST'})
+            .then(r => r.json()).then(data => {
+                if (data.success) location.reload();
+            });
+    }
 }
+
+// Close modal on outside click
+document.addEventListener('click', function(e) {
+    if (e.target.classList.contains('modal')) {
+        e.target.style.display = 'none';
+    }
+});
 </script>
 {% endblock %}
