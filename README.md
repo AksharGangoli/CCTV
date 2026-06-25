@@ -20,6 +20,7 @@ An open-source, self-hosted CCTV monitoring system that turns ordinary cameras i
 - **Telegram Bot (2-Way)** — send commands, get instant responses
 - **WhatsApp Alerts** — via Twilio integration
 - **Daily Summary** — brief message sent to your phone every night
+- **Windows Desktop App** — native GUI with live feeds, no browser needed
 - **Web Dashboard** — beautiful, responsive interface to manage everything
 - **Windows EXE** — build a standalone app, no Python needed for end users
 - **Space Efficient** — face thumbnails ~5KB, plates ~10KB, event clips ~2MB
@@ -29,6 +30,7 @@ An open-source, self-hosted CCTV monitoring system that turns ordinary cameras i
 ## Table of Contents
 
 - [Quick Start](#quick-start)
+- [Windows Desktop App](#windows-desktop-app)
 - [Features Overview](#features-overview)
 - [Camera Setup](#camera-setup)
 - [Face Recognition](#face-recognition)
@@ -69,6 +71,73 @@ python main.py --demo
 # http://localhost:5000
 # Login: admin / admin123
 ```
+
+---
+
+## Windows Desktop App
+
+A native Windows GUI application with live camera feeds, real-time stats, and full system control — no browser needed.
+
+### Launch
+
+```bash
+# Install GUI dependency (one time)
+pip install customtkinter
+
+# Run the app
+python desktop_app.py
+```
+
+Or on Windows, double-click **`START_APP.bat`**
+
+### Interface
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│  🎥 CCTV Smart Monitor       [▶️ Start] [🌐 Dashboard] [🌙 Theme] │
+├────────────┬─────────────────────────────────────────────────────┤
+│  📊 Stats  │  📹 Camera Feeds                                     │
+│            │  ┌─────────┐  ┌─────────┐  ┌─────────┐             │
+│  👤 Faces  │  │  CH1    │  │  CH2    │  │  CH3    │             │
+│  🚗 Vehic  │  │ [LIVE]  │  │ [LIVE]  │  │ [LIVE]  │             │
+│  🔢 Plates │  └─────────┘  └─────────┘  └─────────┘             │
+│  🚨 Alerts │  ┌─────────┐  ┌─────────┐  ┌─────────┐             │
+│  🚪 Entry  │  │  CH4    │  │  CH5    │  │  CH6    │             │
+│  🚶 Exits  │  │ [LIVE]  │  │ [LIVE]  │  │ [LIVE]  │             │
+│            │  └─────────┘  └─────────┘  └─────────┘             │
+│  ⚡ Actions │                                                     │
+│  [Telegram]│                                                     │
+│  [Report]  │                                                     │
+│  [Settings]│                                                     │
+│            │                                                     │
+│  🔔 Alerts │                                                     │
+│  [10:30].. │                                                     │
+│  [10:31].. │                                                     │
+├────────────┴─────────────────────────────────────────────────────┤
+│  🟢 System running                         🕐 25/06/2026 3:15 PM │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+### Desktop App Features
+
+| Feature | Description |
+|---------|-------------|
+| Live Camera Grid | 1-16 feeds with auto-layout (1/2/3/4 columns) |
+| Real-time Stats | Faces, vehicles, plates, alerts, entries, exits |
+| One-click Start/Stop | Green button to start, red to stop |
+| Settings Panel | Toggle helmet, mask, night mode, demo mode, port |
+| Dark/Light Theme | Switch instantly |
+| Alert Feed | Scrolling alerts with timestamps |
+| Web Dashboard Link | Opens full web UI in browser |
+| Quick Actions | Test Telegram, Generate Report, Open Settings |
+
+### Three Ways to Use This System
+
+| Method | Best For | How |
+|--------|----------|-----|
+| **Desktop App** | Daily use on your PC | `python desktop_app.py` or `START_APP.bat` |
+| **Web Dashboard** | Access from any device/phone | Open `http://localhost:5000` |
+| **Telegram Bot** | Quick checks from anywhere | Send commands to your bot |
 
 ---
 
@@ -401,12 +470,14 @@ Face data grows but slowly: 1000 unique faces = only **5 MB total** (stored fore
 
 ```
 CCTV/
-├── main.py                    # Entry point
+├── main.py                    # Entry point (console)
+├── desktop_app.py             # Windows Desktop GUI App
 ├── config.yaml                # All settings
 ├── requirements.txt           # Dependencies
 ├── setup.sh                   # Linux/Mac setup
 ├── build_exe.py               # Windows EXE builder
 ├── build_exe.bat              # Windows build script
+├── START_APP.bat              # Launch desktop app (Windows)
 ├── CCTVSmartMonitor.spec      # PyInstaller spec
 ├── README.md                  # This file
 ├── USER_MANUAL.md             # Detailed user manual
