@@ -20,6 +20,7 @@ import os
 import json
 import sqlite3
 import datetime
+import threading
 from typing import Optional, List, Dict, Any
 import numpy as np
 
@@ -28,6 +29,7 @@ class Database:
     """
     Main database class - handles all storage operations.
     Uses SQLite so no separate database server needed!
+    Thread-safe: uses a lock for all operations.
     """
 
     def __init__(self, db_path: str = "storage/cctv_monitor.db"):
@@ -41,6 +43,8 @@ class Database:
         os.makedirs(os.path.dirname(db_path), exist_ok=True)
         
         self.db_path = db_path
+        self._lock = threading.Lock()
+        self._closed = False
         self.conn = sqlite3.connect(db_path, check_same_thread=False)
         self.conn.row_factory = sqlite3.Row  # Return rows as dicts
         self.cursor = self.conn.cursor()
@@ -184,47 +188,44 @@ class Database:
                  camera_name: str, category: str = "unknown") -> int:
         """
         Save a new face to the database.
-        
-        Args:
-            name: Person's name (or 'Unknown')
-            encoding: Face encoding (128-dim numpy array)
-            thumbnail_path: Path to saved face thumbnail
-            camera_name: Which camera detected it
-            category: resident/visitor/delivery/suspicious/unknown
-            
-        Returns:
-            ID of the new face record
         """
-        encoding_bytes = encoding.tobytes()
-        self.cursor.execute("""
-            INSERT INTO faces (name, encoding, thumbnail_path, camera_name, category)
-            VALUES (?, ?, ?, ?, ?)
-        """, (name, encoding_bytes, thumbnail_path, camera_name, category))
-        self.conn.commit()
-        return self.cursor.lastrowid
+        with self._lock:
+            encoding_bytes = encoding.tobytes()
+            self.cursor.execute("""
+                INSERT INTO faces (name, encoding, thumbnail_path, camera_name, category)
+                VALUES (?, ?, ?, ?, ?)
+            """, (name, encoding_bytes, thumbnail_path, camera_name, category))
+            self.conn.commit()
+            return self.cursor.lastrowid
 
     def update_face_seen(self, face_id: int):
         """Update last_seen time and increment times_seen counter."""
-        self.cursor.execute("""
-            UPDATE faces 
-            SET last_seen = CURRENT_TIMESTAMP, times_seen = times_seen + 1
-            WHERE id = ?
-        """, (face_id,))
-        self.conn.commit()
+        if self._closed:
+            return
+        with self._lock:
+            self.cursor.execute("""
+                UPDATE faces 
+                SET last_seen = CURRENT_TIMESTAMP, times_seen = times_seen + 1
+                WHERE id = ?
+            """, (face_id,))
+            self.conn.commit()
 
     def get_all_face_encodings(self) -> List[Dict]:
         """Get all stored face encodings for matching."""
-        self.cursor.execute("SELECT id, name, encoding, category FROM faces")
-        results = []
-        for row in self.cursor.fetchall():
-            encoding = np.frombuffer(row['encoding'], dtype=np.float64)
-            results.append({
-                'id': row['id'],
-                'name': row['name'],
-                'encoding': encoding,
-                'category': row['category']
-            })
-        return results
+        if self._closed:
+            return []
+        with self._lock:
+            self.cursor.execute("SELECT id, name, encoding, category FROM faces")
+            results = []
+            for row in self.cursor.fetchall():
+                encoding = np.frombuffer(row['encoding'], dtype=np.float64)
+                results.append({
+                    'id': row['id'],
+                    'name': row['name'],
+                    'encoding': encoding,
+                    'category': row['category']
+                })
+            return results
 
     def blacklist_face(self, face_id: int):
         """Mark a face as blacklisted (suspicious person)."""
@@ -244,17 +245,20 @@ class Database:
 
     def get_faces(self, category: str = None, limit: int = 50) -> List[Dict]:
         """Get faces from database, optionally filtered by category."""
-        if category:
-            self.cursor.execute(
-                "SELECT * FROM faces WHERE category = ? ORDER BY last_seen DESC LIMIT ?",
-                (category, limit)
-            )
-        else:
-            self.cursor.execute(
-                "SELECT * FROM faces ORDER BY last_seen DESC LIMIT ?",
-                (limit,)
-            )
-        return [dict(row) for row in self.cursor.fetchall()]
+        if self._closed:
+            return []
+        with self._lock:
+            if category:
+                self.cursor.execute(
+                    "SELECT * FROM faces WHERE category = ? ORDER BY last_seen DESC LIMIT ?",
+                    (category, limit)
+                )
+            else:
+                self.cursor.execute(
+                    "SELECT * FROM faces ORDER BY last_seen DESC LIMIT ?",
+                    (limit,)
+                )
+            return [dict(row) for row in self.cursor.fetchall()]
 
 
     # ========================
@@ -265,32 +269,19 @@ class Database:
                   camera_name: str, confidence: float = 0.0,
                   state_code: str = "", district_code: str = "",
                   series: str = "", number: str = "") -> int:
-        """
-        Save a detected number plate.
-        
-        Args:
-            plate_number: Full plate text (e.g., "MH 12 AB 1234")
-            vehicle_type: Type of vehicle
-            image_path: Path to plate image crop
-            camera_name: Which camera detected it
-            confidence: OCR confidence score
-            state_code: State code (e.g., "MH")
-            district_code: District/RTO code (e.g., "12")
-            series: Letter series (e.g., "AB")
-            number: Number portion (e.g., "1234")
-            
-        Returns:
-            ID of the new plate record
-        """
-        self.cursor.execute("""
-            INSERT INTO number_plates 
-            (plate_number, state_code, district_code, series, number,
-             vehicle_type, image_path, confidence, camera_name)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (plate_number, state_code, district_code, series, number,
-              vehicle_type, image_path, confidence, camera_name))
-        self.conn.commit()
-        return self.cursor.lastrowid
+        """Save a detected number plate."""
+        if self._closed:
+            return 0
+        with self._lock:
+            self.cursor.execute("""
+                INSERT INTO number_plates 
+                (plate_number, state_code, district_code, series, number,
+                 vehicle_type, image_path, confidence, camera_name)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (plate_number, state_code, district_code, series, number,
+                  vehicle_type, image_path, confidence, camera_name))
+            self.conn.commit()
+            return self.cursor.lastrowid
 
     def search_plate(self, query: str) -> List[Dict]:
         """Search for a number plate (partial match supported)."""
@@ -318,11 +309,14 @@ class Database:
 
     def get_plates(self, limit: int = 50) -> List[Dict]:
         """Get recent plate detections."""
-        self.cursor.execute(
-            "SELECT * FROM number_plates ORDER BY detected_at DESC LIMIT ?",
-            (limit,)
-        )
-        return [dict(row) for row in self.cursor.fetchall()]
+        if self._closed:
+            return []
+        with self._lock:
+            self.cursor.execute(
+                "SELECT * FROM number_plates ORDER BY detected_at DESC LIMIT ?",
+                (limit,)
+            )
+            return [dict(row) for row in self.cursor.fetchall()]
 
 
     # ========================
@@ -332,27 +326,17 @@ class Database:
     def add_vehicle(self, vehicle_type: str, camera_name: str,
                     plate_id: int = None, color: str = "unknown",
                     helmet_detected: int = -1, direction: str = "") -> int:
-        """
-        Save a vehicle detection.
-        
-        Args:
-            vehicle_type: car/motorcycle/bus/truck/auto_rickshaw/bicycle
-            camera_name: Which camera detected it
-            plate_id: Associated plate record ID (if any)
-            color: Vehicle color
-            helmet_detected: 1=yes, 0=no, -1=not applicable
-            direction: entry/exit/unknown
-            
-        Returns:
-            ID of the new vehicle record
-        """
-        self.cursor.execute("""
-            INSERT INTO vehicles 
-            (vehicle_type, plate_id, color, helmet_detected, camera_name, direction)
-            VALUES (?, ?, ?, ?, ?, ?)
-        """, (vehicle_type, plate_id, color, helmet_detected, camera_name, direction))
-        self.conn.commit()
-        return self.cursor.lastrowid
+        """Save a vehicle detection."""
+        if self._closed:
+            return 0
+        with self._lock:
+            self.cursor.execute("""
+                INSERT INTO vehicles 
+                (vehicle_type, plate_id, color, helmet_detected, camera_name, direction)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, (vehicle_type, plate_id, color, helmet_detected, camera_name, direction))
+            self.conn.commit()
+            return self.cursor.lastrowid
 
     def get_vehicles(self, vehicle_type: str = None, limit: int = 50) -> List[Dict]:
         """Get vehicle detections, optionally filtered by type."""
@@ -376,47 +360,38 @@ class Database:
                   severity: str = "low", image_path: str = None,
                   video_clip_path: str = None, face_id: int = None,
                   plate_id: int = None) -> int:
-        """
-        Save a security event/alert.
-        
-        Args:
-            event_type: loitering/theft/unauthorized/crowd/motion/blacklist_face/blacklist_plate
-            description: Human-readable description
-            camera_name: Which camera triggered it
-            severity: low/medium/high/critical
-            image_path: Screenshot of the event
-            video_clip_path: Short video clip of the event
-            face_id: Associated face ID (if any)
-            plate_id: Associated plate ID (if any)
-            
-        Returns:
-            ID of the new event record
-        """
-        self.cursor.execute("""
-            INSERT INTO events 
-            (event_type, severity, description, camera_name, image_path,
-             video_clip_path, face_id, plate_id)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        """, (event_type, severity, description, camera_name, image_path,
-              video_clip_path, face_id, plate_id))
-        self.conn.commit()
-        return self.cursor.lastrowid
+        """Save a security event/alert."""
+        if self._closed:
+            return 0
+        with self._lock:
+            self.cursor.execute("""
+                INSERT INTO events 
+                (event_type, severity, description, camera_name, image_path,
+                 video_clip_path, face_id, plate_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """, (event_type, severity, description, camera_name, image_path,
+                  video_clip_path, face_id, plate_id))
+            self.conn.commit()
+            return self.cursor.lastrowid
 
     def get_events(self, event_type: str = None, severity: str = None,
                    limit: int = 50) -> List[Dict]:
         """Get events, optionally filtered."""
-        query = "SELECT * FROM events WHERE 1=1"
-        params = []
-        if event_type:
-            query += " AND event_type = ?"
-            params.append(event_type)
-        if severity:
-            query += " AND severity = ?"
-            params.append(severity)
-        query += " ORDER BY created_at DESC LIMIT ?"
-        params.append(limit)
-        self.cursor.execute(query, params)
-        return [dict(row) for row in self.cursor.fetchall()]
+        if self._closed:
+            return []
+        with self._lock:
+            query = "SELECT * FROM events WHERE 1=1"
+            params = []
+            if event_type:
+                query += " AND event_type = ?"
+                params.append(event_type)
+            if severity:
+                query += " AND severity = ?"
+                params.append(severity)
+            query += " ORDER BY created_at DESC LIMIT ?"
+            params.append(limit)
+            self.cursor.execute(query, params)
+            return [dict(row) for row in self.cursor.fetchall()]
 
     def acknowledge_event(self, event_id: int):
         """Mark an event as acknowledged/seen."""
@@ -428,10 +403,13 @@ class Database:
 
     def get_unacknowledged_events(self) -> List[Dict]:
         """Get all events that haven't been acknowledged."""
-        self.cursor.execute(
-            "SELECT * FROM events WHERE acknowledged = 0 ORDER BY created_at DESC"
-        )
-        return [dict(row) for row in self.cursor.fetchall()]
+        if self._closed:
+            return []
+        with self._lock:
+            self.cursor.execute(
+                "SELECT * FROM events WHERE acknowledged = 0 ORDER BY created_at DESC"
+            )
+            return [dict(row) for row in self.cursor.fetchall()]
 
 
     # ========================
@@ -472,17 +450,20 @@ class Database:
     def get_visitors(self, category: str = None, regular_only: bool = False,
                      limit: int = 50) -> List[Dict]:
         """Get visitor records."""
-        query = "SELECT * FROM visitors WHERE 1=1"
-        params = []
-        if category:
-            query += " AND category = ?"
-            params.append(category)
-        if regular_only:
-            query += " AND is_regular = 1"
-        query += " ORDER BY last_visit DESC LIMIT ?"
-        params.append(limit)
-        self.cursor.execute(query, params)
-        return [dict(row) for row in self.cursor.fetchall()]
+        if self._closed:
+            return []
+        with self._lock:
+            query = "SELECT * FROM visitors WHERE 1=1"
+            params = []
+            if category:
+                query += " AND category = ?"
+                params.append(category)
+            if regular_only:
+                query += " AND is_regular = 1"
+            query += " ORDER BY last_visit DESC LIMIT ?"
+            params.append(limit)
+            self.cursor.execute(query, params)
+            return [dict(row) for row in self.cursor.fetchall()]
 
     # ========================
     # ENTRY/EXIT OPERATIONS
@@ -491,35 +472,40 @@ class Database:
     def add_entry_exit(self, camera_name: str, direction: str,
                        object_type: str = "person"):
         """Record an entry or exit event."""
-        today = datetime.date.today().isoformat()
-        self.cursor.execute("""
-            INSERT INTO entry_exit (camera_name, direction, object_type, date)
-            VALUES (?, ?, ?, ?)
-        """, (camera_name, direction, object_type, today))
-        self.conn.commit()
+        if self._closed:
+            return
+        with self._lock:
+            today = datetime.date.today().isoformat()
+            self.cursor.execute("""
+                INSERT INTO entry_exit (camera_name, direction, object_type, date)
+                VALUES (?, ?, ?, ?)
+            """, (camera_name, direction, object_type, today))
+            self.conn.commit()
 
     def get_entry_exit_count(self, date: str = None, camera_name: str = None) -> Dict:
         """Get entry/exit counts for a given date."""
-        if date is None:
-            date = datetime.date.today().isoformat()
+        if self._closed:
+            return {'entries': 0, 'exits': 0, 'current_inside': 0}
         
-        query_base = "SELECT COUNT(*) as count FROM entry_exit WHERE date = ? AND direction = ?"
-        params_base = [date]
-        
-        if camera_name:
-            query_entry = query_base + " AND camera_name = ?"
-            self.cursor.execute(query_entry, [date, 'entry', camera_name])
-        else:
-            self.cursor.execute(query_base, [date, 'entry'])
-        entries = self.cursor.fetchone()['count']
-        
-        if camera_name:
-            self.cursor.execute(query_base + " AND camera_name = ?", [date, 'exit', camera_name])
-        else:
-            self.cursor.execute(query_base, [date, 'exit'])
-        exits = self.cursor.fetchone()['count']
-        
-        return {'entries': entries, 'exits': exits, 'current_inside': entries - exits}
+        with self._lock:
+            if date is None:
+                date = datetime.date.today().isoformat()
+            
+            query_base = "SELECT COUNT(*) as count FROM entry_exit WHERE date = ? AND direction = ?"
+            
+            if camera_name:
+                self.cursor.execute(query_base + " AND camera_name = ?", [date, 'entry', camera_name])
+            else:
+                self.cursor.execute(query_base, [date, 'entry'])
+            entries = self.cursor.fetchone()['count']
+            
+            if camera_name:
+                self.cursor.execute(query_base + " AND camera_name = ?", [date, 'exit', camera_name])
+            else:
+                self.cursor.execute(query_base, [date, 'exit'])
+            exits = self.cursor.fetchone()['count']
+            
+            return {'entries': entries, 'exits': exits, 'current_inside': entries - exits}
 
 
     # ========================
@@ -558,45 +544,66 @@ class Database:
 
     def get_today_summary(self) -> Dict:
         """Get a quick summary of today's activity."""
-        today = datetime.date.today().isoformat()
+        if self._closed:
+            return {'date': '', 'faces_detected': 0, 'plates_detected': 0,
+                    'events_triggered': 0, 'vehicles_detected': 0,
+                    'entries': 0, 'exits': 0, 'current_inside': 0}
         
-        # Count today's faces
-        self.cursor.execute(
-            "SELECT COUNT(*) as count FROM faces WHERE DATE(last_seen) = ?", (today,)
-        )
-        faces_today = self.cursor.fetchone()['count']
-        
-        # Count today's plates
-        self.cursor.execute(
-            "SELECT COUNT(*) as count FROM number_plates WHERE DATE(detected_at) = ?", (today,)
-        )
-        plates_today = self.cursor.fetchone()['count']
-        
-        # Count today's events
-        self.cursor.execute(
-            "SELECT COUNT(*) as count FROM events WHERE DATE(created_at) = ?", (today,)
-        )
-        events_today = self.cursor.fetchone()['count']
-        
-        # Count today's vehicles
-        self.cursor.execute(
-            "SELECT COUNT(*) as count FROM vehicles WHERE DATE(detected_at) = ?", (today,)
-        )
-        vehicles_today = self.cursor.fetchone()['count']
-        
-        # Entry/exit
-        entry_exit = self.get_entry_exit_count(today)
-        
-        return {
-            'date': today,
-            'faces_detected': faces_today,
-            'plates_detected': plates_today,
-            'events_triggered': events_today,
-            'vehicles_detected': vehicles_today,
-            'entries': entry_exit['entries'],
-            'exits': entry_exit['exits'],
-            'current_inside': entry_exit['current_inside']
-        }
+        try:
+            with self._lock:
+                today = datetime.date.today().isoformat()
+                
+                # Count today's faces
+                self.cursor.execute(
+                    "SELECT COUNT(*) as count FROM faces WHERE DATE(last_seen) = ?", (today,)
+                )
+                faces_today = self.cursor.fetchone()['count']
+                
+                # Count today's plates
+                self.cursor.execute(
+                    "SELECT COUNT(*) as count FROM number_plates WHERE DATE(detected_at) = ?", (today,)
+                )
+                plates_today = self.cursor.fetchone()['count']
+                
+                # Count today's events
+                self.cursor.execute(
+                    "SELECT COUNT(*) as count FROM events WHERE DATE(created_at) = ?", (today,)
+                )
+                events_today = self.cursor.fetchone()['count']
+                
+                # Count today's vehicles
+                self.cursor.execute(
+                    "SELECT COUNT(*) as count FROM vehicles WHERE DATE(detected_at) = ?", (today,)
+                )
+                vehicles_today = self.cursor.fetchone()['count']
+                
+                # Entry/exit
+                self.cursor.execute(
+                    "SELECT COUNT(*) as count FROM entry_exit WHERE date = ? AND direction = ?",
+                    (today, 'entry')
+                )
+                entries = self.cursor.fetchone()['count']
+                
+                self.cursor.execute(
+                    "SELECT COUNT(*) as count FROM entry_exit WHERE date = ? AND direction = ?",
+                    (today, 'exit')
+                )
+                exits = self.cursor.fetchone()['count']
+                
+                return {
+                    'date': today,
+                    'faces_detected': faces_today,
+                    'plates_detected': plates_today,
+                    'events_triggered': events_today,
+                    'vehicles_detected': vehicles_today,
+                    'entries': entries,
+                    'exits': exits,
+                    'current_inside': entries - exits
+                }
+        except Exception:
+            return {'date': '', 'faces_detected': 0, 'plates_detected': 0,
+                    'events_triggered': 0, 'vehicles_detected': 0,
+                    'entries': 0, 'exits': 0, 'current_inside': 0}
 
     # ========================
     # UTILITY OPERATIONS
@@ -660,5 +667,11 @@ class Database:
 
     def close(self):
         """Close database connection."""
-        self.conn.close()
+        with self._lock:
+            self._closed = True
+            self.conn.close()
         print("[DATABASE] Connection closed")
+    
+    def _is_closed(self) -> bool:
+        """Check if database is closed."""
+        return self._closed
