@@ -126,7 +126,7 @@ class FaceDetector:
                                 face_id = self.db.add_face(
                                     name=name,
                                     encoding=encoding,
-                                    thumbnail_path=thumb_path,
+                                    thumbnail_path=filename,
                                     camera_name="pre-loaded",
                                     category="resident"
                                 )
@@ -142,32 +142,23 @@ class FaceDetector:
     def detect_faces(self, frame: np.ndarray, camera_name: str = "") -> List[Dict]:
         """
         Detect and recognize faces in a frame.
-        
-        Args:
-            frame: Video frame (numpy array from OpenCV)
-            camera_name: Name of the camera that captured this frame
-            
-        Returns:
-            List of detected face dictionaries with:
-            - name: Person's name or "Unknown"
-            - location: (top, right, bottom, left) bounding box
-            - confidence: Match confidence (0.0 to 1.0)
-            - category: resident/visitor/suspicious/unknown
-            - is_blacklisted: True if person is on blacklist
-            - face_id: Database ID
-            - is_new: True if this is a newly detected face
+        Returns empty list on any error (never crashes).
         """
         if frame is None:
             return []
         
-        results = []
-        
-        if FACE_RECOGNITION_AVAILABLE:
-            results = self._detect_with_face_recognition(frame, camera_name)
-        else:
-            results = self._detect_with_opencv(frame, camera_name)
-        
-        return results
+        try:
+            results = []
+            
+            if FACE_RECOGNITION_AVAILABLE:
+                results = self._detect_with_face_recognition(frame, camera_name)
+            else:
+                results = self._detect_with_opencv(frame, camera_name)
+            
+            return results
+        except Exception as e:
+            print(f"[FACE] Error detecting faces: {e}")
+            return []
 
     def _detect_with_face_recognition(self, frame: np.ndarray, 
                                        camera_name: str) -> List[Dict]:
@@ -414,7 +405,8 @@ class FaceDetector:
         # Compress to save space
         cv2.imwrite(filepath, face_image, [cv2.IMWRITE_JPEG_QUALITY, 60])
         
-        return filepath
+        # Return just the filename (not full path) for web serving
+        return filename
 
 
     # ========================
@@ -455,11 +447,11 @@ class FaceDetector:
             thumb_path = os.path.join(self.faces_dir, thumb_filename)
             cv2.imwrite(thumb_path, img_small, [cv2.IMWRITE_JPEG_QUALITY, 60])
             
-            # Save to database
+            # Save to database (store just filename for cross-platform compatibility)
             face_id = self.db.add_face(
                 name=name,
                 encoding=encoding,
-                thumbnail_path=thumb_path,
+                thumbnail_path=thumb_filename,
                 camera_name="manual_add",
                 category=category
             )

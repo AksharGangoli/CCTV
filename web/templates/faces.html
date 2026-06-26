@@ -96,7 +96,8 @@
                     <span class="face-new-badge">NEW</span>
                     {% endif %}
                     {% if face.thumbnail_path %}
-                    <img src="/static/faces/{{ face.thumbnail_path.split('/')[-1] }}" 
+                    {% set thumb_filename = face.thumbnail_path.replace('\\', '/').split('/')[-1] %}
+                    <img src="/static/faces/{{ thumb_filename }}" 
                          alt="{{ face.name or 'Unknown' }}"
                          onerror="this.parentElement.innerHTML='<div class=\'no-image\'><i class=\'fas fa-user fa-2x\'></i></div>'">
                     {% else %}

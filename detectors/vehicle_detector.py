@@ -105,14 +105,18 @@ class VehicleDetector:
         if not self.enabled or frame is None:
             return []
         
-        results = []
-        
-        if self.model is not None:
-            results = self._detect_with_yolo(frame, camera_name)
-        else:
-            results = self._detect_basic(frame, camera_name)
-        
-        return results
+        try:
+            results = []
+            
+            if self.model is not None:
+                results = self._detect_with_yolo(frame, camera_name)
+            else:
+                results = self._detect_basic(frame, camera_name)
+            
+            return results
+        except Exception as e:
+            print(f"[VEHICLE] Error detecting vehicles: {e}")
+            return []
 
     def _detect_with_yolo(self, frame: np.ndarray, 
                           camera_name: str) -> List[Dict]:

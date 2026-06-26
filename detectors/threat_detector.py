@@ -112,46 +112,36 @@ class ThreatDetector:
             return []
         
         threats = []
-        
-        # Check for blacklisted faces
-        if face_detections:
-            face_threats = self._check_blacklisted_faces(
-                face_detections, camera_name
-            )
-            threats.extend(face_threats)
-        
-        # Check for blacklisted plates
-        if plate_detections:
-            plate_threats = self._check_blacklisted_plates(
-                plate_detections, camera_name
-            )
-            threats.extend(plate_threats)
-        
-        # Check for loitering
-        if self.loitering_enabled and face_detections:
-            loitering_threats = self._check_loitering(
-                face_detections, camera_name
-            )
-            threats.extend(loitering_threats)
-        
-        # Check crowd density
-        if self.crowd_enabled:
-            crowd_threats = self._check_crowd(person_count, camera_name)
-            threats.extend(crowd_threats)
-        
-        # Check motion anomaly
-        motion_threats = self._check_motion_anomaly(frame, camera_name)
-        threats.extend(motion_threats)
-        
-        # Save threats to database
-        for threat in threats:
-            if not self._is_alert_in_cooldown(threat):
-                self.db.add_event(
-                    event_type=threat['type'],
-                    description=threat['description'],
-                    camera_name=camera_name,
-                    severity=threat['severity']
-                )
+        try:
+            if face_detections:
+                face_threats = self._check_blacklisted_faces(face_detections, camera_name)
+                threats.extend(face_threats)
+            
+            if plate_detections:
+                plate_threats = self._check_blacklisted_plates(plate_detections, camera_name)
+                threats.extend(plate_threats)
+            
+            if self.loitering_enabled and face_detections:
+                loitering_threats = self._check_loitering(face_detections, camera_name)
+                threats.extend(loitering_threats)
+            
+            if self.crowd_enabled:
+                crowd_threats = self._check_crowd(person_count, camera_name)
+                threats.extend(crowd_threats)
+            
+            motion_threats = self._check_motion_anomaly(frame, camera_name)
+            threats.extend(motion_threats)
+            
+            for threat in threats:
+                if not self._is_alert_in_cooldown(threat):
+                    self.db.add_event(
+                        event_type=threat['type'],
+                        description=threat['description'],
+                        camera_name=camera_name,
+                        severity=threat['severity']
+                    )
+        except Exception as e:
+            print(f"[THREAT] Error analyzing frame: {e}")
         
         return threats
 

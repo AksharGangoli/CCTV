@@ -117,94 +117,66 @@ class PlateDetector:
                       camera_name: str = "") -> List[Dict]:
         """
         Detect and read number plates in a frame.
-        
-        Args:
-            frame: Video frame
-            camera_name: Camera that captured this frame
-            
-        Returns:
-            List of detected plates with:
-            - plate_number: Full plate text
-            - state: State name
-            - state_code: 2-letter state code
-            - district_code: RTO district number
-            - series: Letter series
-            - number: Plate number
-            - location: Bounding box (x, y, w, h)
-            - confidence: OCR confidence
-            - image_path: Path to saved plate image
-            - is_blacklisted: Whether plate is on blacklist
+        Returns empty list on any error (never crashes).
         """
         if frame is None:
             return []
         
         results = []
-        
-        # Step 1: Find plate regions in the frame
-        plate_regions = self._find_plate_regions(frame)
-        
-        # Step 2: For each region, read the text
-        for region in plate_regions:
-            x, y, w, h = region
-            plate_img = frame[y:y+h, x:x+w]
-            
-            # Preprocess plate image for better OCR
-            processed = self._preprocess_plate(plate_img)
-            
-            # Read text from plate
-            plate_text, confidence = self._read_plate_text(processed)
-            
-            if plate_text and confidence >= self.confidence_threshold:
-                # Parse Indian format
-                parsed = self._parse_indian_plate(plate_text)
+        try:
+            plate_regions = self._find_plate_regions(frame)
+            for region in plate_regions:
+                x, y, w, h = region
+                plate_img = frame[y:y+h, x:x+w]
+                processed = self._preprocess_plate(plate_img)
+                plate_text, confidence = self._read_plate_text(processed)
                 
-                if parsed:
-                    # Check cooldown
-                    if self._is_in_cooldown(parsed['full_plate']):
-                        continue
+                if plate_text and confidence >= self.confidence_threshold:
+                    parsed = self._parse_indian_plate(plate_text)
                     
-                    # Save plate image
-                    image_path = ""
-                    if self.save_plate_images:
-                        image_path = self._save_plate_image(plate_img, 
-                                                           parsed['full_plate'])
-                    
-                    # Check if blacklisted
-                    is_blacklisted = self.db.is_plate_blacklisted(parsed['full_plate'])
-                    
-                    # Save to database
-                    plate_id = self.db.add_plate(
-                        plate_number=parsed['full_plate'],
-                        vehicle_type="unknown",
-                        image_path=image_path,
-                        camera_name=camera_name,
-                        confidence=confidence,
-                        state_code=parsed['state_code'],
-                        district_code=parsed['district_code'],
-                        series=parsed['series'],
-                        number=parsed['number']
-                    )
-                    
-                    # Update cooldown
-                    self._last_plates[parsed['full_plate']] = datetime.now()
-                    
-                    results.append({
-                        'plate_number': parsed['full_plate'],
-                        'state': parsed['state_name'],
-                        'state_code': parsed['state_code'],
-                        'district_code': parsed['district_code'],
-                        'series': parsed['series'],
-                        'number': parsed['number'],
-                        'location': (x, y, w, h),
-                        'confidence': confidence,
-                        'image_path': image_path,
-                        'is_blacklisted': is_blacklisted,
-                        'plate_id': plate_id
-                    })
-                    
-                    status = "⚠️ BLACKLISTED" if is_blacklisted else "✓"
-                    print(f"[ANPR] {status} Plate: {parsed['full_plate']} "
-                          f"({parsed['state_name']}) [{confidence:.0%}]")
+                    if parsed:
+                        if self._is_in_cooldown(parsed['full_plate']):
+                            continue
+                        
+                        image_path = ""
+                        if self.save_plate_images:
+                            image_path = self._save_plate_image(plate_img, parsed['full_plate'])
+                        
+                        is_blacklisted = self.db.is_plate_blacklisted(parsed['full_plate'])
+                        
+                        plate_id = self.db.add_plate(
+                            plate_number=parsed['full_plate'],
+                            vehicle_type="unknown",
+                            image_path=image_path,
+                            camera_name=camera_name,
+                            confidence=confidence,
+                            state_code=parsed['state_code'],
+                            district_code=parsed['district_code'],
+                            series=parsed['series'],
+                            number=parsed['number']
+                        )
+                        
+                        self._last_plates[parsed['full_plate']] = datetime.now()
+                        
+                        results.append({
+                            'plate_number': parsed['full_plate'],
+                            'state': parsed['state_name'],
+                            'state_code': parsed['state_code'],
+                            'district_code': parsed['district_code'],
+                            'series': parsed['series'],
+                            'number': parsed['number'],
+                            'location': (x, y, w, h),
+                            'confidence': confidence,
+                            'image_path': image_path,
+                            'is_blacklisted': is_blacklisted,
+                            'plate_id': plate_id
+                        })
+                        
+                        status = "⚠️ BLACKLISTED" if is_blacklisted else "✓"
+                        print(f"[ANPR] {status} Plate: {parsed['full_plate']} "
+                              f"({parsed['state_name']}) [{confidence:.0%}]")
+        except Exception as e:
+            print(f"[ANPR] Error detecting plates: {e}")
         
         return results
 

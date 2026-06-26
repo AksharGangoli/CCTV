@@ -95,52 +95,51 @@ class MaskDetector:
             return []
         
         results = []
-        
-        # Use pre-detected face locations if available
-        if face_locations:
-            for loc in face_locations:
-                top, right, bottom, left = loc
-                face_region = frame[top:bottom, left:right]
+        try:
+            if face_locations:
+                for loc in face_locations:
+                    top, right, bottom, left = loc
+                    face_region = frame[top:bottom, left:right]
+                    
+                    if face_region.size == 0:
+                        continue
+                    
+                    is_masked, confidence = self._check_mask(face_region)
+                    
+                    if is_masked and confidence >= self.confidence_threshold:
+                        results.append({
+                            'location': (top, right, bottom, left),
+                            'confidence': confidence,
+                            'is_masked': True,
+                            'camera': camera_name
+                        })
+            else:
+                gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                faces = self._face_cascade.detectMultiScale(
+                    gray, scaleFactor=1.1, minNeighbors=5, minSize=(60, 60)
+                )
                 
-                if face_region.size == 0:
-                    continue
-                
-                is_masked, confidence = self._check_mask(face_region)
-                
-                if is_masked and confidence >= self.confidence_threshold:
-                    results.append({
-                        'location': (top, right, bottom, left),
-                        'confidence': confidence,
-                        'is_masked': True,
-                        'camera': camera_name
-                    })
-        else:
-            # Detect faces ourselves
-            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            faces = self._face_cascade.detectMultiScale(
-                gray, scaleFactor=1.1, minNeighbors=5, minSize=(60, 60)
-            )
+                for (x, y, w, h) in faces:
+                    face_region = frame[y:y+h, x:x+w]
+                    
+                    if face_region.size == 0:
+                        continue
+                    
+                    is_masked, confidence = self._check_mask(face_region)
+                    
+                    if is_masked and confidence >= self.confidence_threshold:
+                        top, right, bottom, left = y, x+w, y+h, x
+                        results.append({
+                            'location': (top, right, bottom, left),
+                            'confidence': confidence,
+                            'is_masked': True,
+                            'camera': camera_name
+                        })
             
-            for (x, y, w, h) in faces:
-                face_region = frame[y:y+h, x:x+w]
-                
-                if face_region.size == 0:
-                    continue
-                
-                is_masked, confidence = self._check_mask(face_region)
-                
-                if is_masked and confidence >= self.confidence_threshold:
-                    top, right, bottom, left = y, x+w, y+h, x
-                    results.append({
-                        'location': (top, right, bottom, left),
-                        'confidence': confidence,
-                        'is_masked': True,
-                        'camera': camera_name
-                    })
-        
-        # Send alerts for masked detections
-        if results:
-            self._handle_mask_alerts(frame, results, camera_name)
+            if results:
+                self._handle_mask_alerts(frame, results, camera_name)
+        except Exception as e:
+            print(f"[MASK] Error detecting masks: {e}")
         
         return results
 
