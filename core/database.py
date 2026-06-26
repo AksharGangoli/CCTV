@@ -609,51 +609,88 @@ class Database:
     # UTILITY OPERATIONS
     # ========================
 
-    def cleanup_old_data(self, days: int = 30):
+    def cleanup_old_data(self, auto_delete_config: Dict = None):
         """
-        Delete data older than specified days to save space.
-        IMPORTANT: Face data is NEVER deleted (lifetime storage).
-        Only cleans: events, entry_exit, vehicles, number_plates, daily_stats
-        """
-        cutoff = (datetime.datetime.now() - datetime.timedelta(days=days)).isoformat()
+        Delete data older than specified days PER CATEGORY.
         
-        # NEVER delete faces - they are stored for lifetime
-        # Only delete transient data
-        tables_to_clean = {
-            'events': 'created_at',
-            'entry_exit': 'timestamp',
-            'vehicles': 'detected_at',
-            'number_plates': 'detected_at',
-            'daily_stats': 'date',
+        Args:
+            auto_delete_config: Dict with category: days mapping
+                0 = never delete
+        """
+        if auto_delete_config is None:
+            auto_delete_config = {
+                'faces': 0, 'vehicles': 30, 'number_plates': 30,
+                'events': 30, 'recordings': 14, 'visitors': 0,
+                'entry_exit': 30, 'daily_stats': 90,
+            }
+        
+        category_table_map = {
+            'faces': ('faces', 'last_seen'),
+            'vehicles': ('vehicles', 'detected_at'),
+            'number_plates': ('number_plates', 'detected_at'),
+            'events': ('events', 'created_at'),
+            'visitors': ('visitors', 'last_visit'),
+            'entry_exit': ('entry_exit', 'timestamp'),
+            'daily_stats': ('daily_stats', 'date'),
         }
         
         total_deleted = 0
-        for table, time_column in tables_to_clean.items():
-            self.cursor.execute(
-                f"SELECT COUNT(*) as count FROM {table} WHERE {time_column} < ?",
-                (cutoff,)
-            )
-            count = self.cursor.fetchone()['count']
+        
+        with self._lock:
+            for category, days in auto_delete_config.items():
+                if days == 0 or category == 'recordings':
+                    continue
+                table_info = category_table_map.get(category)
+                if not table_info:
+                    continue
+                table_name, time_column = table_info
+                cutoff = (datetime.datetime.now() - datetime.timedelta(days=days)).isoformat()
+                try:
+                    self.cursor.execute(
+                        f"SELECT COUNT(*) as count FROM {table_name} WHERE {time_column} < ?",
+                        (cutoff,))
+                    count = self.cursor.fetchone()['count']
+                    if count > 0:
+                        self.cursor.execute(
+                            f"DELETE FROM {table_name} WHERE {time_column} < ?",
+                            (cutoff,))
+                        total_deleted += count
+                        print(f"[DATABASE] Deleted {count} from {category} (>{days} days)")
+                except Exception as e:
+                    print(f"[DATABASE] Error cleaning {category}: {e}")
             
-            if count > 0:
-                self.cursor.execute(
-                    f"DELETE FROM {table} WHERE {time_column} < ?",
-                    (cutoff,)
-                )
-                total_deleted += count
-                print(f"[DATABASE] Deleted {count} old records from {table}")
+            self.conn.commit()
+            try:
+                self.cursor.execute("VACUUM")
+            except:
+                pass
         
-        # Also clean old visitor records BUT keep face references
-        # (visitors table links to faces, so we keep the face data)
+        # Cleanup old recording files
+        rec_days = auto_delete_config.get('recordings', 14)
+        if rec_days > 0:
+            self._cleanup_old_files('recordings', rec_days)
         
-        self.conn.commit()
-        
-        # Reclaim disk space
-        self.cursor.execute("VACUUM")
-        
-        print(f"[DATABASE] Cleanup complete: {total_deleted} records removed")
-        print(f"[DATABASE] Face data preserved (lifetime storage)")
-        print(f"[DATABASE] Database size: {self.get_storage_size()}")
+        print(f"[DATABASE] Cleanup done: {total_deleted} records removed")
+        print(f"[DATABASE] Size: {self.get_storage_size()}")
+
+    def _cleanup_old_files(self, directory: str, days: int):
+        """Delete files older than X days from a directory."""
+        import time as time_module
+        if not os.path.exists(directory):
+            return
+        cutoff_time = time_module.time() - (days * 86400)
+        deleted = 0
+        for filename in os.listdir(directory):
+            filepath = os.path.join(directory, filename)
+            if os.path.isfile(filepath) and filename != '.gitkeep':
+                if os.path.getmtime(filepath) < cutoff_time:
+                    try:
+                        os.remove(filepath)
+                        deleted += 1
+                    except:
+                        pass
+        if deleted > 0:
+            print(f"[DATABASE] Deleted {deleted} old files from {directory}")
 
     def get_storage_size(self) -> str:
         """Get database file size in human-readable format."""

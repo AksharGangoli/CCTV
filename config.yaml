@@ -1,45 +1,22 @@
 # ============================================================
 # CCTV SMART MONITOR - CONFIGURATION FILE
 # ============================================================
-# Easy to configure! Just edit the sections below.
-# Supports 1 to 16 cameras. Add or remove as needed.
+# All settings are customizable from here OR from the web dashboard.
+# Supports 1 to 16 cameras. Everything is beginner-friendly.
 # ============================================================
 
 # --- GENERAL SETTINGS ---
 app:
   name: "Smart CCTV Monitor"
-  # Set to true for first-time testing without real cameras
   demo_mode: true
-  # How often to process frames (higher = less CPU, lower = faster detection)
-  # Recommended: 3 for 1-4 cameras, 5 for 5-8, 7 for 9-16
   frame_skip: 3
-  # Country for number plate format
   country: "india"
-  # Maximum cameras supported
   max_cameras: 16
 
 # ============================================================
 # CAMERAS (1 to 16 channels)
 # ============================================================
-# Add your cameras below. Each camera can have different detections enabled.
-# Types: rtsp, usb, file, http
-#
-# RTSP URL examples:
-#   Hikvision: rtsp://admin:pass@IP:554/Streaming/Channels/101
-#   Dahua/CP Plus: rtsp://admin:pass@IP:554/cam/realmonitor?channel=1&subtype=0
-#   Reolink: rtsp://admin:pass@IP:554/h264Preview_01_main
-#
-# Detection options per camera:
-#   detect_faces: true/false     - Face detection & recognition
-#   detect_plates: true/false    - Number plate reading
-#   detect_vehicles: true/false  - Vehicle classification
-#   detect_loitering: true/false - Loitering/suspicious activity
-#   detect_mask: true/false      - Masked person detection
-#   count_entry_exit: true/false - People counting
-# ============================================================
-
 cameras:
-  # Channel 1
   - name: "CH1 - Main Gate"
     source: "rtsp://admin:password@192.168.1.101:554/stream1"
     type: "rtsp"
@@ -51,7 +28,6 @@ cameras:
     detect_mask: true
     count_entry_exit: true
 
-  # Channel 2
   - name: "CH2 - Back Gate"
     source: "rtsp://admin:password@192.168.1.102:554/stream1"
     type: "rtsp"
@@ -63,58 +39,21 @@ cameras:
     detect_mask: true
     count_entry_exit: true
 
-  # Channel 3 (Example: Parking - only plates & vehicles)
-  - name: "CH3 - Parking"
-    source: "rtsp://admin:password@192.168.1.103:554/stream1"
-    type: "rtsp"
-    enabled: false
-    detect_faces: false
-    detect_plates: true
-    detect_vehicles: true
-    detect_loitering: false
-    detect_mask: false
-    count_entry_exit: false
-
-  # Channel 4 (Example: Indoor - only faces & loitering)
-  - name: "CH4 - Lobby"
-    source: "rtsp://admin:password@192.168.1.104:554/stream1"
-    type: "rtsp"
-    enabled: false
-    detect_faces: true
-    detect_plates: false
-    detect_vehicles: false
-    detect_loitering: true
-    detect_mask: true
-    count_entry_exit: true
-
-  # Channels 5-16: Add more cameras as needed
-  # Just copy the format above and change name/source/settings
-
-# --- FACE RECOGNITION SETTINGS ---
+# --- FACE RECOGNITION ---
 face_recognition:
-  # How similar a face needs to be to match (0.4-0.7, lower = stricter)
   tolerance: 0.6
-  # Minimum face size to detect (pixels)
   min_face_size: 20
-  # ALWAYS save unknown faces (for later naming in web dashboard)
   save_unknown_faces: true
-  # Seconds before detecting same face again
   cooldown_seconds: 30
-  # NEVER auto-delete face data (lifetime storage)
-  never_delete_faces: true
 
 # --- MASK DETECTION ---
-# Sends photo + alert when masked person is detected
 mask_detection:
   enabled: true
-  # Send photo to Telegram when mask detected
   send_photo_telegram: true
-  # Send message to WhatsApp when mask detected
   send_message_whatsapp: true
-  # Sensitivity (0.5 = normal, 0.3 = more sensitive)
   confidence: 0.5
 
-# --- NUMBER PLATE SETTINGS (INDIAN FORMAT) ---
+# --- NUMBER PLATE (INDIAN ANPR) ---
 anpr:
   enabled: true
   save_plate_images: true
@@ -130,8 +69,8 @@ vehicle_detection:
     - truck
     - auto_rickshaw
     - bicycle
-  # Helmet detection - OFF by default (can be toggled from web dashboard)
   helmet_detection: false
+  save_vehicle_images: true
 
 # --- THREAT/THEFT DETECTION ---
 threat_detection:
@@ -161,22 +100,21 @@ night_mode:
     end: "06:00"
   enhancement_level: 2
 
-# --- ALERTS ---
+# --- ALERTS (configurable from web dashboard too) ---
 alerts:
   telegram:
     enabled: false
-    bot_token: "YOUR_TELEGRAM_BOT_TOKEN"
-    chat_id: "YOUR_CHAT_ID"
+    bot_token: ""
+    chat_id: ""
     send_photo: true
-    # Two-way interaction: users can send commands to bot
     two_way_enabled: true
 
   whatsapp:
     enabled: false
-    account_sid: "YOUR_TWILIO_ACCOUNT_SID"
-    auth_token: "YOUR_TWILIO_AUTH_TOKEN"
+    account_sid: ""
+    auth_token: ""
     from_number: "whatsapp:+14155238886"
-    to_number: "whatsapp:+91XXXXXXXXXX"
+    to_number: ""
 
   sound:
     enabled: true
@@ -184,35 +122,38 @@ alerts:
 
   webhook:
     enabled: false
-    url: "http://your-server.com/webhook"
+    url: ""
 
 # --- DAILY REPORT ---
-# Sends a brief TEXT message (not PDF) to Telegram & WhatsApp
 daily_report:
   enabled: true
   generate_time: "23:59"
-  # Send brief message via Telegram
   send_telegram: true
-  # Send brief message via WhatsApp
   send_whatsapp: true
-  # NO PDF by default (set to true if you want PDF too)
   save_pdf: false
 
-# --- STORAGE SETTINGS ---
+# --- STORAGE & AUTO-DELETE (per category) ---
 storage:
   database: "storage/cctv_monitor.db"
   faces_dir: "storage/faces"
   plates_dir: "storage/plates"
+  vehicles_dir: "storage/vehicles"
   recordings_dir: "recordings"
-  # Face data is NEVER deleted (lifetime storage)
-  face_data_lifetime: true
-  # Auto-delete OTHER data (plates, events, vehicles) after X days
-  # Set to 0 to never delete
-  auto_cleanup_days: 30
-  # Max storage in MB (0 = unlimited)
-  max_storage_mb: 5000
   compress_images: true
   image_quality: 60
+  max_storage_mb: 5000
+
+  # Auto-delete settings PER CATEGORY
+  # Set to 0 = never delete, any number = days to keep
+  auto_delete:
+    faces: 0              # NEVER delete face data (default)
+    vehicles: 30          # Delete vehicle records after 30 days
+    number_plates: 30     # Delete plate records after 30 days
+    events: 30            # Delete alerts/events after 30 days
+    recordings: 14        # Delete video clips after 14 days
+    visitors: 0           # NEVER delete visitor log (default)
+    entry_exit: 30        # Delete entry/exit records after 30 days
+    daily_stats: 90       # Delete daily reports after 90 days
 
 # --- WEB DASHBOARD ---
 web:
@@ -223,8 +164,8 @@ web:
     enabled: true
     username: "admin"
     password: "admin123"
-  # Allow camera management from web dashboard
   allow_camera_config: true
+  allow_alert_config: true
 
 # --- VISITOR LOG ---
 visitor_log:

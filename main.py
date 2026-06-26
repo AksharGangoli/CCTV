@@ -414,23 +414,29 @@ class CCTVMonitor:
             time.sleep(30)  # Check every 30 seconds
 
     def _cleanup_scheduler(self):
-        """Schedule periodic storage cleanup. Faces are NEVER deleted."""
+        """Schedule periodic storage cleanup. Per-category auto-delete."""
         storage_config = self.config.get('storage', {})
-        cleanup_days = storage_config.get('auto_cleanup_days', 30)
+        auto_delete_config = storage_config.get('auto_delete', {
+            'faces': 0, 'vehicles': 30, 'number_plates': 30,
+            'events': 30, 'recordings': 14, 'visitors': 0,
+            'entry_exit': 30, 'daily_stats': 90,
+        })
         
-        if cleanup_days <= 0:
-            print("[CLEANUP] Auto-cleanup disabled (set to 0)")
-            return  # Cleanup disabled
+        # Check if all are set to 0 (never delete anything)
+        if all(v == 0 for v in auto_delete_config.values()):
+            print("[CLEANUP] All auto-delete disabled (all set to 0)")
+            return
         
-        print(f"[CLEANUP] Auto-cleanup enabled: delete non-face data after {cleanup_days} days")
-        print(f"[CLEANUP] Face data: LIFETIME (never deleted)")
+        print(f"[CLEANUP] Auto-delete enabled per category:")
+        for cat, days in auto_delete_config.items():
+            status = "NEVER" if days == 0 else f"{days} days"
+            print(f"[CLEANUP]   {cat}: {status}")
         
         while self._running:
-            # Run cleanup once per day at 3 AM
             now = datetime.now()
             if now.hour == 3 and now.minute == 0:
                 print("[CLEANUP] Running scheduled cleanup...")
-                self.db.cleanup_old_data(cleanup_days)
+                self.db.cleanup_old_data(auto_delete_config)
                 time.sleep(61)
             time.sleep(30)
 
