@@ -935,7 +935,7 @@ def _register_system_routes(app):
 
 
 def _register_stream_routes(app):
-    """Register MJPEG video streaming routes."""
+    """Register MJPEG video streaming routes and storage file serving."""
 
     @app.route("/video_feed/<camera_name>")
     def video_feed(camera_name):
@@ -949,6 +949,37 @@ def _register_stream_routes(app):
             _generate_frames(app, camera_name),
             mimetype="multipart/x-mixed-replace; boundary=frame",
         )
+
+    @app.route("/storage/<path:filepath>")
+    def serve_storage(filepath):
+        """
+        Serve files from storage directory (face thumbnails, plate images, etc).
+        This allows templates to use: /storage/faces/image.jpg
+        """
+        from flask import send_from_directory
+        storage_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "storage")
+        return send_from_directory(storage_dir, filepath)
+
+    @app.route("/static/faces/<path:filepath>")
+    def serve_faces(filepath):
+        """Serve face thumbnail images from storage/faces/."""
+        from flask import send_from_directory
+        faces_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "storage", "faces")
+        return send_from_directory(faces_dir, filepath)
+
+    @app.route("/static/plates/<path:filepath>")
+    def serve_plates(filepath):
+        """Serve plate images from storage/plates/."""
+        from flask import send_from_directory
+        plates_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "storage", "plates")
+        return send_from_directory(plates_dir, filepath)
+
+    @app.route("/static/vehicles/<path:filepath>")
+    def serve_vehicles(filepath):
+        """Serve vehicle images from storage/vehicles/."""
+        from flask import send_from_directory
+        vehicles_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "storage", "vehicles")
+        return send_from_directory(vehicles_dir, filepath)
 
 
 def _generate_frames(app, camera_name):

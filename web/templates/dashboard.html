@@ -11,7 +11,7 @@
             <i class="fas fa-user-circle"></i>
         </div>
         <div class="stat-info">
-            <h3 id="stat-faces">{{ summary.get('total_faces', 0) }}</h3>
+            <h3 id="stat-faces">{{ summary.get('faces_detected', 0) }}</h3>
             <p>Faces Detected</p>
         </div>
     </div>
@@ -20,7 +20,7 @@
             <i class="fas fa-car"></i>
         </div>
         <div class="stat-info">
-            <h3 id="stat-vehicles">{{ summary.get('total_vehicles', 0) }}</h3>
+            <h3 id="stat-vehicles">{{ summary.get('vehicles_detected', 0) }}</h3>
             <p>Vehicles Today</p>
         </div>
     </div>
@@ -29,7 +29,7 @@
             <i class="fas fa-id-card"></i>
         </div>
         <div class="stat-info">
-            <h3 id="stat-plates">{{ summary.get('total_plates', 0) }}</h3>
+            <h3 id="stat-plates">{{ summary.get('plates_detected', 0) }}</h3>
             <p>Plates Captured</p>
         </div>
     </div>
@@ -38,7 +38,7 @@
             <i class="fas fa-exclamation-triangle"></i>
         </div>
         <div class="stat-info">
-            <h3 id="stat-alerts">{{ summary.get('total_alerts', 0) }}</h3>
+            <h3 id="stat-alerts">{{ summary.get('events_triggered', 0) }}</h3>
             <p>Active Alerts</p>
         </div>
     </div>
@@ -87,10 +87,8 @@
                         <td><i class="fas fa-camera" style="color: var(--primary); margin-right: 8px;"></i>{{ cam.name }}</td>
                         <td>{{ cam.get('location', 'N/A') }}</td>
                         <td>
-                            {% if cam.status == 'online' %}
+                            {% if cam.get('connected') %}
                             <span class="badge badge-success"><i class="fas fa-circle" style="font-size: 0.5rem;"></i> Online</span>
-                            {% elif cam.status == 'recording' %}
-                            <span class="badge badge-info"><i class="fas fa-circle" style="font-size: 0.5rem;"></i> Recording</span>
                             {% else %}
                             <span class="badge badge-danger"><i class="fas fa-circle" style="font-size: 0.5rem;"></i> Offline</span>
                             {% endif %}
@@ -161,7 +159,7 @@
             </div>
             <div class="ee-stat inside">
                 <i class="fas fa-building"></i>
-                <span class="ee-number" id="ee-inside">{{ summary.get('inside', 0) }}</span>
+                <span class="ee-number" id="ee-inside">{{ summary.get('current_inside', 0) }}</span>
                 <span class="ee-label">Currently Inside</span>
             </div>
             <div class="ee-stat exit">
@@ -197,17 +195,17 @@ function refreshDashboard() {
         .then(response => response.json())
         .then(data => {
             // Update stat cards
-            document.getElementById('stat-faces').textContent = data.total_faces || 0;
-            document.getElementById('stat-vehicles').textContent = data.total_vehicles || 0;
-            document.getElementById('stat-plates').textContent = data.total_plates || 0;
-            document.getElementById('stat-alerts').textContent = data.total_alerts || 0;
+            document.getElementById('stat-faces').textContent = data.faces_detected || 0;
+            document.getElementById('stat-vehicles').textContent = data.vehicles_detected || 0;
+            document.getElementById('stat-plates').textContent = data.plates_detected || 0;
+            document.getElementById('stat-alerts').textContent = data.events_triggered || 0;
             document.getElementById('stat-entries').textContent = data.entries || 0;
             document.getElementById('stat-exits').textContent = data.exits || 0;
 
             // Update entry/exit display
             document.getElementById('ee-entries').textContent = data.entries || 0;
             document.getElementById('ee-exits').textContent = data.exits || 0;
-            document.getElementById('ee-inside').textContent = data.inside || 0;
+            document.getElementById('ee-inside').textContent = data.current_inside || 0;
         })
         .catch(err => console.warn('Dashboard refresh failed:', err));
 }
