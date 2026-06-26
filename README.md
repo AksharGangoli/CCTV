@@ -712,26 +712,109 @@ Send these to your bot for instant info:
 
 Access at `http://localhost:5000` (or `http://YOUR_IP:5000` from any device on your network).
 
+**Architecture:** Flask app factory pattern (`create_app(monitor)`) with clean separation of concerns. Professional-grade with security headers, error handling middleware, health checks, and graceful degradation.
+
 ### Pages
 
-| Page | Purpose |
-|------|---------|
-| Dashboard | Today's stats, camera status, recent alerts |
-| Live Cameras | Real-time video feeds |
-| Faces | View, name, blacklist/whitelist detected faces |
-| Number Plates | Search, view, blacklist plates |
-| Visitor Log | Track repeat visitors and regulars |
-| Alerts | All security events with severity levels |
-| Reports | Daily report history |
-| Settings | Add/remove cameras, toggle detections, test alerts |
+| Page | Route | Purpose |
+|------|-------|---------|
+| Dashboard | `/` | Today's stats, camera status, recent alerts |
+| Cameras | `/cameras` | Live feeds, camera management |
+| Faces | `/faces` | View, rename, categorize, blacklist/whitelist |
+| Vehicles | `/plates` | Vehicle tracking + plate search |
+| Visitors | `/visitors` | Visitor analytics & frequency tracking |
+| Events | `/events` | Security events with acknowledge/dismiss |
+| Reports | `/reports` | Report generation & history |
+| Settings | `/settings` | Full system configuration panel |
 
 ### Settings Page Features
 
-- Add/remove cameras (up to 16)
-- Toggle per-camera detections via checkboxes
-- Global toggles: Helmet detection, Mask alerts, Night mode
-- Test Telegram and WhatsApp connections
-- View storage usage
+- **Camera Management:** Add/remove cameras (up to 16), per-camera detection toggles
+- **Alert Credentials:** Telegram (bot_token, chat_id, enabled), WhatsApp (account_sid, auth_token, from/to numbers, enabled)
+- **Auto-Delete Rules:** Per-category retention (faces, vehicles, plates, events, recordings, visitors, entry_exit, daily_stats) — set days or 0 for never
+- **Global Toggles:** Helmet detection, Mask detection, Night mode
+- **Storage Overview:** Current database size and usage
+
+### REST API Reference
+
+All API endpoints return JSON. Authentication required (session-based).
+
+#### Dashboard & Stats
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/summary` | Today's statistics |
+| GET | `/api/events?limit=20` | Recent events |
+| GET | `/api/cameras` | Camera status list |
+| GET | `/api/entry_exit` | Entry/exit people count |
+
+#### Face Management
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/faces?category=visitor` | Face list with filter |
+| POST | `/api/faces/<id>/rename` | Rename face `{"name":"...", "category":"..."}` |
+| POST | `/api/faces/<id>/blacklist` | Blacklist a face |
+| POST | `/api/faces/<id>/whitelist` | Whitelist a face |
+
+#### Vehicles & Plates
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/vehicles?type=car` | Vehicle list with type filter |
+| GET | `/api/plates/search?q=MH12` | Search plates |
+| POST | `/api/plates/<plate>/blacklist` | Blacklist a plate |
+
+#### Events & Reports
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/events/<id>/acknowledge` | Dismiss an event |
+| POST | `/api/report/generate` | Generate report on demand |
+
+#### Alert Testing
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/test/telegram` | Send test Telegram message |
+| POST | `/api/test/whatsapp` | Send test WhatsApp message |
+
+#### Camera Management
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/cameras/add` | Add camera `{"name":"...", "source":"...", ...}` |
+| POST | `/api/cameras/remove` | Remove camera `{"index": 0}` |
+| POST | `/api/cameras/toggle` | Toggle feature `{"index":0, "field":"detect_faces", "value":true}` |
+
+#### Settings
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/settings/toggle` | Global toggle `{"feature":"night_mode", "value":true}` |
+| POST | `/api/settings/alerts` | Save alert creds `{"telegram":{...}, "whatsapp":{...}}` |
+| POST | `/api/settings/auto_delete` | Save retention `{"faces":0, "vehicles":30, ...}` |
+
+#### System
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/health` | Health check (public, no auth) |
+| GET | `/api/system/status` | Detailed system status |
+
+#### Video Stream
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/video_feed/<camera_name>` | MJPEG live stream |
+
+### Customization
+
+Edit the `APP_CONFIG` dictionary at the top of `web/app.py` to quickly customize:
+
+```python
+APP_CONFIG = {
+    "SECRET_KEY": "your-secret-key",
+    "MAX_CAMERAS": 16,
+    "VIDEO_JPEG_QUALITY": 50,      # 1-100, lower = smaller
+    "VIDEO_FPS_DELAY": 0.033,      # ~30fps
+    "DEFAULT_EVENT_LIMIT": 20,
+    "DEFAULT_FACE_LIMIT": 200,
+    "DEFAULT_PLATE_LIMIT": 100,
+    "DEFAULT_VISITOR_LIMIT": 100,
+}
+```
 
 ---
 
