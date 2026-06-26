@@ -1051,6 +1051,43 @@ python main.py --help          # Show all options
 
 ---
 
+## Web Dashboard Templates
+
+The web dashboard uses a professional enterprise-grade UI with Jinja2/Flask templating. All templates extend `base.html` and use a consistent design system.
+
+### Template Architecture
+
+| Template | Features |
+|----------|----------|
+| `dashboard.html` | 6 stat cards, camera status table, recent alerts feed, entry/exit tracker, quick actions panel, auto-refresh every 5s |
+| `faces.html` | Face grid with categories, "NEW" badges, rename modal, blacklist/whitelist, category filters, search, stats summary |
+| `plates.html` | Vehicle detection cards with plate captions, helmet status badges, plate registry table with confidence %, blacklist management, vehicle type filters |
+| `settings.html` | 5-section config panel: camera management (up to 16), alert configuration (Telegram + WhatsApp), auto-delete settings, global detection toggles, system info |
+
+### Customizing the UI
+
+- **Colors:** Edit CSS variables in `web/static/css/style.css` (`:root` section)
+- **Layout:** All pages use the `.stats-grid`, `.card`, `.table`, `.faces-grid` CSS classes
+- **Icons:** Font Awesome 6.4 is loaded via CDN in `base.html`
+- **JavaScript:** Each page has self-contained JS in `{% block scripts %}` — no external frameworks needed
+- **Responsive:** All pages adapt to mobile with sidebar collapse and grid reflow
+
+### Design System Classes
+
+| Class | Purpose |
+|-------|---------|
+| `.stat-card` | Stats overview cards with icon + number |
+| `.card` / `.card-header` / `.card-body` | Content sections |
+| `.badge-success/danger/info/resident/visitor` | Status indicators |
+| `.faces-grid` | Auto-fit grid for face/vehicle cards |
+| `.filter-bar` | Horizontal filter button row |
+| `.search-bar` | Search input with button |
+| `.modal` / `.modal-content` | Dialog overlays |
+| `.switch` / `.slider` | Toggle switches |
+| `.toggle-item` | Checkbox with label in pill shape |
+
+---
+
 ## Contributing
 
 Contributions welcome! Feel free to open issues or submit pull requests.
