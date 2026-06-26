@@ -1,18 +1,105 @@
 {% extends "base.html" %}
-{% block title %}Number Plates - CCTV Smart Monitor{% endblock %}
-{% block page_title %}Number Plates (ANPR){% endblock %}
+
+{% block title %}Vehicles & Plates - CCTV Smart Monitor{% endblock %}
+{% block page_title %}<i class="fas fa-car"></i> Vehicles & Number Plates{% endblock %}
 
 {% block content %}
 <!-- Search Bar -->
 <div class="search-bar">
-    <input type="text" id="plate-search" placeholder="Search plate number (e.g., MH 12 AB)" oninput="searchPlates()">
+    <input type="text" id="plateSearch" placeholder="Search by plate number, vehicle type, or camera..." onkeyup="searchPlates()">
     <button class="btn btn-primary" onclick="searchPlates()"><i class="fas fa-search"></i> Search</button>
+    <button class="btn btn-primary" style="background: var(--success);" onclick="exportPlates()"><i class="fas fa-file-export"></i> Export</button>
 </div>
 
-<!-- Plates Table -->
+<!-- Filter Bar -->
+<div class="filter-bar">
+    <button class="btn active" onclick="filterVehicles('all', this)">All</button>
+    <button class="btn" onclick="filterVehicles('car', this)"><i class="fas fa-car"></i> Cars</button>
+    <button class="btn" onclick="filterVehicles('motorcycle', this)"><i class="fas fa-motorcycle"></i> Motorcycles</button>
+    <button class="btn" onclick="filterVehicles('bus', this)"><i class="fas fa-bus"></i> Bus</button>
+    <button class="btn" onclick="filterVehicles('truck', this)"><i class="fas fa-truck"></i> Trucks</button>
+    <button class="btn" onclick="filterVehicles('auto_rickshaw', this)"><i class="fas fa-shuttle-van"></i> Auto</button>
+    <button class="btn" onclick="filterVehicles('bicycle', this)"><i class="fas fa-bicycle"></i> Bicycle</button>
+</div>
+
+<!-- Section 1: Detected Vehicles -->
 <div class="card">
+    <div class="card-header">
+        <h3><i class="fas fa-car-side"></i> Detected Vehicles</h3>
+        <span class="badge badge-info">{{ vehicles|length if vehicles else 0 }} detected</span>
+    </div>
     <div class="card-body">
-        <table class="table" id="plates-table">
+        {% if vehicles %}
+        <div class="faces-grid" id="vehicleGrid">
+            {% for vehicle in vehicles %}
+            <div class="face-card vehicle-card" data-type="{{ vehicle.vehicle_type }}">
+                <div class="face-image" style="width: 100%; height: 120px; border-radius: 8px;">
+                    {% if vehicle.get('image_path') %}
+                    <img src="/static/plates/{{ vehicle.image_path.split('/')[-1] }}" 
+                         alt="{{ vehicle.plate_id or 'Vehicle' }}"
+                         style="width: 100%; height: 100%; object-fit: cover; border-radius: 8px;"
+                         onerror="this.parentElement.innerHTML='<div class=\'no-image\' style=\'height:100%\'><i class=\'fas fa-car fa-3x\'></i></div>'">
+                    {% else %}
+                    <div class="no-image" style="height: 100%;">
+                        <i class="fas fa-car fa-3x"></i>
+                    </div>
+                    {% endif %}
+                </div>
+                <!-- Plate Number as Caption -->
+                {% if vehicle.plate_id %}
+                <div style="margin-top: 10px; padding: 6px 12px; background: var(--darker); color: #fff; border-radius: 6px; font-family: monospace; font-size: 1rem; font-weight: 700; letter-spacing: 1px; text-align: center;">
+                    {{ vehicle.plate_id }}
+                </div>
+                {% endif %}
+                <div style="margin-top: 8px;">
+                    <!-- Vehicle Type Badge -->
+                    {% set type_colors = {'car': '#2563eb', 'motorcycle': '#7c3aed', 'bus': '#f59e0b', 'truck': '#64748b', 'auto_rickshaw': '#10b981', 'bicycle': '#0d9488'} %}
+                    <span class="badge" style="background: {{ type_colors.get(vehicle.vehicle_type, '#64748b') }}20; color: {{ type_colors.get(vehicle.vehicle_type, '#64748b') }};">
+                        <i class="fas fa-{{ 'car' if vehicle.vehicle_type == 'car' else 'motorcycle' if vehicle.vehicle_type == 'motorcycle' else 'bus' if vehicle.vehicle_type == 'bus' else 'truck' if vehicle.vehicle_type == 'truck' else 'shuttle-van' if vehicle.vehicle_type == 'auto_rickshaw' else 'bicycle' }}"></i>
+                        {{ vehicle.vehicle_type|replace('_', ' ')|title }}
+                    </span>
+                    {% if vehicle.get('color') %}
+                    <span class="badge badge-info" style="margin-left: 4px;">{{ vehicle.color|title }}</span>
+                    {% endif %}
+                </div>
+                <!-- Helmet Status for Motorcycles -->
+                {% if vehicle.vehicle_type == 'motorcycle' %}
+                <div style="margin-top: 6px;">
+                    {% if vehicle.get('helmet_detected') %}
+                    <span class="badge badge-success"><i class="fas fa-hard-hat"></i> Helmet</span>
+                    {% else %}
+                    <span class="badge badge-danger"><i class="fas fa-exclamation-circle"></i> No Helmet</span>
+                    {% endif %}
+                </div>
+                {% endif %}
+                <div class="face-meta" style="margin-top: 8px;">
+                    <i class="fas fa-camera"></i> {{ vehicle.camera_name }}
+                </div>
+                <div class="face-meta">
+                    <i class="fas fa-clock"></i> {{ vehicle.detected_at }}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <i class="fas fa-car" style="font-size: 3rem;"></i>
+            <h3>No Vehicles Detected</h3>
+            <p>Vehicle detections will appear here when cameras detect them.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Section 2: Number Plates Table -->
+<div class="card">
+    <div class="card-header">
+        <h3><i class="fas fa-id-card"></i> Number Plates Registry</h3>
+        <span class="badge badge-info">{{ plates|length if plates else 0 }} plates</span>
+    </div>
+    <div class="card-body" style="overflow-x: auto;">
+        {% if plates %}
+        <table class="table" id="platesTable">
             <thead>
                 <tr>
                     <th>Plate Number</th>
@@ -21,76 +108,153 @@
                     <th>Camera</th>
                     <th>Time</th>
                     <th>Confidence</th>
+                    <th>Status</th>
                     <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
-                {% if plates %}
-                    {% for plate in plates %}
-                    <tr class="{{ 'row-danger' if plate.get('is_blacklisted') }}">
-                        <td><strong>{{ plate.get('plate_number', 'N/A') }}</strong></td>
-                        <td>{{ plate.get('state_code', '') }}</td>
-                        <td>{{ plate.get('vehicle_type', 'Unknown') }}</td>
-                        <td>{{ plate.get('camera_name', '') }}</td>
-                        <td>{{ plate.get('detected_at', '') }}</td>
-                        <td>{{ "%.0f%%"|format((plate.get('confidence', 0) or 0) * 100) }}</td>
-                        <td>
-                            {% if not plate.get('is_blacklisted') %}
-                            <button class="btn btn-sm btn-danger" onclick="blacklistPlate('{{ plate.plate_number }}')">
-                                <i class="fas fa-ban"></i>
-                            </button>
-                            {% else %}
-                            <span class="badge badge-danger">Blacklisted</span>
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% endfor %}
-                {% else %}
-                    <tr>
-                        <td colspan="7" class="text-center text-muted">
-                            No plates detected yet. Plates will appear when vehicles pass cameras.
-                        </td>
-                    </tr>
-                {% endif %}
+                {% for plate in plates %}
+                <tr class="{{ 'row-danger' if plate.get('is_blacklisted') }}" data-plate="{{ plate.plate_number }}">
+                    <td>
+                        <span style="font-family: monospace; font-weight: 700; font-size: 0.95rem; letter-spacing: 0.5px;">
+                            {{ plate.plate_number }}
+                        </span>
+                    </td>
+                    <td>
+                        {% if plate.get('state_code') %}
+                        <span class="badge badge-info">{{ plate.state_code }}</span>
+                        {% else %}
+                        <span class="text-muted">--</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ plate.get('vehicle_type', 'Unknown')|replace('_', ' ')|title }}</td>
+                    <td><i class="fas fa-camera" style="color: var(--primary); margin-right: 4px;"></i>{{ plate.camera_name }}</td>
+                    <td>{{ plate.detected_at }}</td>
+                    <td>
+                        {% set conf = plate.get('confidence', 0) %}
+                        <span class="badge {{ 'badge-success' if conf >= 80 else 'badge-info' if conf >= 60 else 'badge-danger' }}">
+                            {{ conf }}%
+                        </span>
+                    </td>
+                    <td>
+                        {% if plate.get('is_blacklisted') %}
+                        <span class="badge badge-danger"><i class="fas fa-ban"></i> Blacklisted</span>
+                        {% else %}
+                        <span class="badge badge-success"><i class="fas fa-check"></i> Clear</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if plate.get('is_blacklisted') %}
+                        <button class="btn btn-sm btn-success" onclick="unblacklistPlate('{{ plate.plate_number }}')" title="Remove from blacklist">
+                            <i class="fas fa-unlock"></i>
+                        </button>
+                        {% else %}
+                        <button class="btn btn-sm btn-danger" onclick="blacklistPlate('{{ plate.plate_number }}')" title="Add to blacklist">
+                            <i class="fas fa-ban"></i>
+                        </button>
+                        {% endif %}
+                        <button class="btn btn-sm btn-primary" onclick="viewPlateHistory('{{ plate.plate_number }}')" title="View history" style="margin-left: 4px;">
+                            <i class="fas fa-history"></i>
+                        </button>
+                    </td>
+                </tr>
+                {% endfor %}
             </tbody>
         </table>
+        {% else %}
+        <div class="empty-state">
+            <i class="fas fa-id-card" style="font-size: 3rem;"></i>
+            <h3>No Plates Captured</h3>
+            <p>License plate captures will appear here.</p>
+        </div>
+        {% endif %}
     </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
+// Search plates and vehicles
 function searchPlates() {
-    const query = document.getElementById('plate-search').value;
-    if (query.length < 2) return;
+    const query = document.getElementById('plateSearch').value.toLowerCase();
     
-    fetch(`/api/plates/search?q=${encodeURIComponent(query)}`)
-        .then(r => r.json())
-        .then(plates => {
-            const tbody = document.querySelector('#plates-table tbody');
-            tbody.innerHTML = '';
-            plates.forEach(plate => {
-                tbody.innerHTML += `
-                    <tr class="${plate.is_blacklisted ? 'row-danger' : ''}">
-                        <td><strong>${plate.plate_number}</strong></td>
-                        <td>${plate.state_code || ''}</td>
-                        <td>${plate.vehicle_type || 'Unknown'}</td>
-                        <td>${plate.camera_name || ''}</td>
-                        <td>${plate.detected_at || ''}</td>
-                        <td>${Math.round((plate.confidence || 0) * 100)}%</td>
-                        <td><button class="btn btn-sm btn-danger" onclick="blacklistPlate('${plate.plate_number}')"><i class="fas fa-ban"></i></button></td>
-                    </tr>`;
-            });
-        });
+    // Filter vehicle cards
+    document.querySelectorAll('.vehicle-card').forEach(card => {
+        const text = card.textContent.toLowerCase();
+        card.style.display = text.includes(query) ? '' : 'none';
+    });
+    
+    // Filter table rows
+    document.querySelectorAll('#platesTable tbody tr').forEach(row => {
+        const text = row.textContent.toLowerCase();
+        row.style.display = text.includes(query) ? '' : 'none';
+    });
 }
 
+// Filter vehicles by type
+function filterVehicles(type, btn) {
+    // Update active button
+    document.querySelectorAll('.filter-bar .btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    
+    // Filter cards
+    document.querySelectorAll('.vehicle-card').forEach(card => {
+        if (type === 'all' || card.dataset.type === type) {
+            card.style.display = '';
+        } else {
+            card.style.display = 'none';
+        }
+    });
+}
+
+// Blacklist a plate
 function blacklistPlate(plateNumber) {
-    if (confirm(`Blacklist plate ${plateNumber}? You will get alerts when this vehicle is detected.`)) {
-        fetch(`/api/plates/${encodeURIComponent(plateNumber)}/blacklist`, {method: 'POST'})
-            .then(r => r.json()).then(data => {
-                if (data.success) location.reload();
-            });
+    if (confirm(`Are you sure you want to blacklist plate: ${plateNumber}?`)) {
+        fetch('/api/plates/blacklist', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ plate_number: plateNumber })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Failed to blacklist plate: ' + (data.error || 'Unknown error'));
+            }
+        })
+        .catch(err => alert('Error: ' + err.message));
     }
+}
+
+// Remove from blacklist
+function unblacklistPlate(plateNumber) {
+    if (confirm(`Remove plate ${plateNumber} from blacklist?`)) {
+        fetch('/api/plates/unblacklist', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ plate_number: plateNumber })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Failed: ' + (data.error || 'Unknown error'));
+            }
+        })
+        .catch(err => alert('Error: ' + err.message));
+    }
+}
+
+// View plate history
+function viewPlateHistory(plateNumber) {
+    window.location.href = `/plates/history/${plateNumber}`;
+}
+
+// Export plates data
+function exportPlates() {
+    window.location.href = '/api/plates/export';
 }
 </script>
 {% endblock %}

@@ -1,89 +1,111 @@
 {% extends "base.html" %}
+
 {% block title %}Dashboard - CCTV Smart Monitor{% endblock %}
-{% block page_title %}Dashboard{% endblock %}
+{% block page_title %}<i class="fas fa-tachometer-alt"></i> Command Center{% endblock %}
 
 {% block content %}
-<!-- Stats Cards -->
+<!-- Stats Overview -->
 <div class="stats-grid">
     <div class="stat-card">
-        <div class="stat-icon blue"><i class="fas fa-user-circle"></i></div>
+        <div class="stat-icon blue">
+            <i class="fas fa-user-circle"></i>
+        </div>
         <div class="stat-info">
-            <h3>{{ summary.get('faces_detected', 0) }}</h3>
+            <h3 id="stat-faces">{{ summary.get('total_faces', 0) }}</h3>
             <p>Faces Detected</p>
         </div>
     </div>
     <div class="stat-card">
-        <div class="stat-icon green"><i class="fas fa-car"></i></div>
+        <div class="stat-icon green">
+            <i class="fas fa-car"></i>
+        </div>
         <div class="stat-info">
-            <h3>{{ summary.get('vehicles_detected', 0) }}</h3>
-            <p>Vehicles</p>
+            <h3 id="stat-vehicles">{{ summary.get('total_vehicles', 0) }}</h3>
+            <p>Vehicles Today</p>
         </div>
     </div>
     <div class="stat-card">
-        <div class="stat-icon orange"><i class="fas fa-id-card"></i></div>
+        <div class="stat-icon purple">
+            <i class="fas fa-id-card"></i>
+        </div>
         <div class="stat-info">
-            <h3>{{ summary.get('plates_detected', 0) }}</h3>
-            <p>Plates Read</p>
+            <h3 id="stat-plates">{{ summary.get('total_plates', 0) }}</h3>
+            <p>Plates Captured</p>
         </div>
     </div>
     <div class="stat-card">
-        <div class="stat-icon red"><i class="fas fa-bell"></i></div>
+        <div class="stat-icon red">
+            <i class="fas fa-exclamation-triangle"></i>
+        </div>
         <div class="stat-info">
-            <h3>{{ summary.get('events_triggered', 0) }}</h3>
-            <p>Alerts Today</p>
+            <h3 id="stat-alerts">{{ summary.get('total_alerts', 0) }}</h3>
+            <p>Active Alerts</p>
         </div>
     </div>
     <div class="stat-card">
-        <div class="stat-icon teal"><i class="fas fa-sign-in-alt"></i></div>
+        <div class="stat-icon teal">
+            <i class="fas fa-sign-in-alt"></i>
+        </div>
         <div class="stat-info">
-            <h3>{{ summary.get('entries', 0) }}</h3>
-            <p>Entries</p>
+            <h3 id="stat-entries">{{ summary.get('entries', 0) }}</h3>
+            <p>Entries Today</p>
         </div>
     </div>
     <div class="stat-card">
-        <div class="stat-icon purple"><i class="fas fa-sign-out-alt"></i></div>
+        <div class="stat-icon orange">
+            <i class="fas fa-sign-out-alt"></i>
+        </div>
         <div class="stat-info">
-            <h3>{{ summary.get('exits', 0) }}</h3>
-            <p>Exits</p>
+            <h3 id="stat-exits">{{ summary.get('exits', 0) }}</h3>
+            <p>Exits Today</p>
         </div>
     </div>
 </div>
 
-<!-- Camera Status & Alerts -->
+<!-- Two Column Grid: Camera Status + Recent Alerts -->
 <div class="dashboard-grid">
     <!-- Camera Status -->
     <div class="card">
         <div class="card-header">
-            <h3><i class="fas fa-camera"></i> Camera Status</h3>
+            <h3><i class="fas fa-video"></i> Camera Status</h3>
+            <span class="badge badge-success">{{ cameras|selectattr('status', 'equalto', 'online')|list|length if cameras else 0 }} Online</span>
         </div>
         <div class="card-body">
             {% if cameras %}
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th>Camera</th>
-                            <th>Type</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for cam in cameras %}
-                        <tr>
-                            <td>{{ cam.name }}</td>
-                            <td>{{ cam.type }}</td>
-                            <td>
-                                {% if cam.connected %}
-                                    <span class="badge badge-success">Online</span>
-                                {% else %}
-                                    <span class="badge badge-danger">Offline</span>
-                                {% endif %}
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Camera</th>
+                        <th>Location</th>
+                        <th>Status</th>
+                        <th>FPS</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for cam in cameras %}
+                    <tr>
+                        <td><i class="fas fa-camera" style="color: var(--primary); margin-right: 8px;"></i>{{ cam.name }}</td>
+                        <td>{{ cam.get('location', 'N/A') }}</td>
+                        <td>
+                            {% if cam.status == 'online' %}
+                            <span class="badge badge-success"><i class="fas fa-circle" style="font-size: 0.5rem;"></i> Online</span>
+                            {% elif cam.status == 'recording' %}
+                            <span class="badge badge-info"><i class="fas fa-circle" style="font-size: 0.5rem;"></i> Recording</span>
+                            {% else %}
+                            <span class="badge badge-danger"><i class="fas fa-circle" style="font-size: 0.5rem;"></i> Offline</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ cam.get('fps', '--') }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
             {% else %}
-                <p class="text-muted">No cameras configured. Edit config.yaml to add cameras.</p>
+            <div class="empty-state">
+                <i class="fas fa-video-slash" style="font-size: 2rem;"></i>
+                <h3>No Cameras Configured</h3>
+                <p>Add cameras in Settings to start monitoring.</p>
+            </div>
             {% endif %}
         </div>
     </div>
@@ -92,60 +114,76 @@
     <div class="card">
         <div class="card-header">
             <h3><i class="fas fa-bell"></i> Recent Alerts</h3>
+            <a href="/events" class="btn btn-sm btn-primary">View All</a>
         </div>
         <div class="card-body">
             {% if events %}
-                <div class="event-list">
-                    {% for event in events %}
-                    <div class="event-item severity-{{ event.get('severity', 'low') }}">
-                        <div class="event-icon">
-                            {% if event.severity == 'critical' %}
-                                <i class="fas fa-exclamation-circle"></i>
-                            {% elif event.severity == 'high' %}
-                                <i class="fas fa-exclamation-triangle"></i>
-                            {% else %}
-                                <i class="fas fa-info-circle"></i>
-                            {% endif %}
-                        </div>
-                        <div class="event-details">
-                            <p class="event-desc">{{ event.get('description', '') }}</p>
-                            <span class="event-time">{{ event.get('created_at', '') }}</span>
-                        </div>
-                        <button class="btn btn-sm" onclick="acknowledgeEvent({{ event.id }})">
-                            <i class="fas fa-check"></i>
-                        </button>
+            <div class="event-list">
+                {% for event in events[:8] %}
+                <div class="event-item severity-{{ event.get('severity', 'low') }}">
+                    <div>
+                        <span class="severity-badge {{ event.get('severity', 'low') }}">{{ event.get('severity', 'low')|upper }}</span>
                     </div>
-                    {% endfor %}
+                    <div style="flex: 1;">
+                        <div class="event-type">{{ event.get('event_type', 'Alert') }}</div>
+                        <div class="event-desc">{{ event.get('description', '') }}</div>
+                        <div class="event-meta">
+                            <i class="fas fa-camera"></i> {{ event.get('camera_name', 'Unknown') }} &bull;
+                            <i class="fas fa-clock"></i> {{ event.get('detected_at', '')|string }}
+                        </div>
+                    </div>
                 </div>
+                {% endfor %}
+            </div>
             {% else %}
-                <p class="text-muted text-center">No active alerts. All clear!</p>
+            <div class="empty-state">
+                <i class="fas fa-check-circle" style="font-size: 2rem; color: var(--success);"></i>
+                <h3>All Clear</h3>
+                <p>No recent alerts. System operating normally.</p>
+            </div>
             {% endif %}
         </div>
     </div>
 </div>
 
-<!-- Entry/Exit Counter -->
+<!-- Entry/Exit Tracker -->
 <div class="card">
     <div class="card-header">
-        <h3><i class="fas fa-door-open"></i> Entry/Exit Today</h3>
+        <h3><i class="fas fa-door-open"></i> Entry / Exit Tracker</h3>
+        <span class="text-muted" style="font-size: 0.8rem;"><i class="fas fa-sync-alt"></i> Auto-refreshing every 5s</span>
     </div>
     <div class="card-body">
         <div class="entry-exit-display">
             <div class="ee-stat entry">
-                <i class="fas fa-arrow-right"></i>
-                <span class="ee-number" id="entries-count">{{ summary.get('entries', 0) }}</span>
-                <span class="ee-label">Entries</span>
+                <i class="fas fa-arrow-circle-down"></i>
+                <span class="ee-number" id="ee-entries">{{ summary.get('entries', 0) }}</span>
+                <span class="ee-label">Total Entries</span>
             </div>
             <div class="ee-stat inside">
-                <i class="fas fa-users"></i>
-                <span class="ee-number" id="inside-count">{{ summary.get('current_inside', 0) }}</span>
-                <span class="ee-label">Inside Now</span>
+                <i class="fas fa-building"></i>
+                <span class="ee-number" id="ee-inside">{{ summary.get('inside', 0) }}</span>
+                <span class="ee-label">Currently Inside</span>
             </div>
             <div class="ee-stat exit">
-                <i class="fas fa-arrow-left"></i>
-                <span class="ee-number" id="exits-count">{{ summary.get('exits', 0) }}</span>
-                <span class="ee-label">Exits</span>
+                <i class="fas fa-arrow-circle-up"></i>
+                <span class="ee-number" id="ee-exits">{{ summary.get('exits', 0) }}</span>
+                <span class="ee-label">Total Exits</span>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="card" style="margin-top: 10px;">
+    <div class="card-header">
+        <h3><i class="fas fa-bolt"></i> Quick Actions</h3>
+    </div>
+    <div class="card-body">
+        <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+            <a href="/cameras" class="btn btn-primary"><i class="fas fa-video"></i> Live Feed</a>
+            <a href="/faces" class="btn btn-primary" style="background: var(--success);"><i class="fas fa-user-plus"></i> Manage Faces</a>
+            <a href="/reports" class="btn btn-primary" style="background: var(--purple, #7c3aed);"><i class="fas fa-file-pdf"></i> Generate Report</a>
+            <a href="/settings" class="btn btn-primary" style="background: var(--gray);"><i class="fas fa-cog"></i> Settings</a>
         </div>
     </div>
 </div>
@@ -153,23 +191,35 @@
 
 {% block scripts %}
 <script>
-// Auto-refresh stats every 5 seconds
-setInterval(function() {
+// Auto-refresh dashboard stats every 5 seconds
+function refreshDashboard() {
     fetch('/api/summary')
-        .then(r => r.json())
+        .then(response => response.json())
         .then(data => {
-            document.getElementById('entries-count').textContent = data.entries || 0;
-            document.getElementById('exits-count').textContent = data.exits || 0;
-            document.getElementById('inside-count').textContent = data.current_inside || 0;
-        });
-}, 5000);
+            // Update stat cards
+            document.getElementById('stat-faces').textContent = data.total_faces || 0;
+            document.getElementById('stat-vehicles').textContent = data.total_vehicles || 0;
+            document.getElementById('stat-plates').textContent = data.total_plates || 0;
+            document.getElementById('stat-alerts').textContent = data.total_alerts || 0;
+            document.getElementById('stat-entries').textContent = data.entries || 0;
+            document.getElementById('stat-exits').textContent = data.exits || 0;
 
-function acknowledgeEvent(eventId) {
-    fetch(`/api/events/${eventId}/acknowledge`, {method: 'POST'})
-        .then(r => r.json())
-        .then(data => {
-            if (data.success) location.reload();
-        });
+            // Update entry/exit display
+            document.getElementById('ee-entries').textContent = data.entries || 0;
+            document.getElementById('ee-exits').textContent = data.exits || 0;
+            document.getElementById('ee-inside').textContent = data.inside || 0;
+        })
+        .catch(err => console.warn('Dashboard refresh failed:', err));
 }
+
+// Refresh every 5 seconds
+setInterval(refreshDashboard, 5000);
+
+// Also refresh on page visibility change
+document.addEventListener('visibilitychange', function() {
+    if (!document.hidden) {
+        refreshDashboard();
+    }
+});
 </script>
 {% endblock %}
