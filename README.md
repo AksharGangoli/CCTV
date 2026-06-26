@@ -1,29 +1,42 @@
 # CCTV Smart Monitor
 
-**AI-Powered Intelligent Security System for India**
+### AI-Powered Intelligent Security System
 
-An open-source, self-hosted CCTV monitoring system that turns ordinary cameras into a smart security network. Runs entirely on your own hardware — no cloud, no subscriptions, complete privacy.
+A production-ready, enterprise-grade CCTV monitoring platform built for India. Combines real-time AI detection (faces, plates, vehicles, threats) with professional alerting, web dashboard, and desktop GUI — fully customizable from a single config file or the web interface.
 
 ---
 
 ## Highlights
 
-- Monitor **1 to 16 cameras** simultaneously (RTSP, USB, HTTP, Video files)
-- **Face Recognition** — auto-detect, store, name, blacklist/whitelist
-- **Indian Number Plate Reader (ANPR)** — supports all 36 states & UTs
-- **Vehicle Classification** — car, bike, bus, truck, auto-rickshaw, bicycle
-- **Helmet Detection** — toggle on/off from dashboard
-- **Mask Detection** — instant photo alert to Telegram + WhatsApp
-- **Loitering Detection** — alert when someone lingers too long
-- **Entry/Exit Counting** — real-time people counter with visitor log
-- **Night Mode** — auto-enhances dark/low-light footage
-- **Telegram Bot (2-Way)** — send commands, get instant responses
-- **WhatsApp Alerts** — via Twilio integration
-- **Daily Summary** — brief message sent to your phone every night
-- **Windows Desktop App** — native GUI with live feeds, no browser needed
-- **Web Dashboard** — beautiful, responsive interface to manage everything
-- **Windows EXE** — build a standalone app, no Python needed for end users
-- **Space Efficient** — face thumbnails ~5KB, plates ~10KB, event clips ~2MB
+| Feature | Details |
+|---------|---------|
+| Multi-Camera Support | 1–16 cameras (RTSP, USB, HTTP stream, video file) |
+| Face Recognition | Auto-save unknown faces, one-click rename, blacklist/whitelist |
+| Indian ANPR | Number plate reader supporting all 36 states & UTs |
+| Vehicle Classification | Car, bike, bus, truck, auto-rickshaw, bicycle |
+| Helmet Detection | Toggle on/off per camera, alerts on violation |
+| Mask Detection | Photo alert to Telegram + WhatsApp on no-mask |
+| Loitering Detection | Configurable time & area thresholds |
+| Entry/Exit Counting | Real-time visitor log with daily reset |
+| Night Mode | Auto-detect or scheduled image enhancement |
+| Telegram Bot (2-Way) | /status /summary /cameras /count /alerts /faces /plates /report /help |
+| WhatsApp Alerts | Via Twilio — instant photo + text alerts |
+| Daily Summary | Automated end-of-day report to phone |
+| Desktop App | Modern dark-theme GUI (CustomTkinter) |
+| Web Dashboard | Professional 8-page responsive interface |
+| Windows EXE Builder | One-click PyInstaller build |
+| Windows Installer | Inno Setup — Next → Next → Install |
+| Cross-Platform | Windows, macOS, Linux, Raspberry Pi |
+| Per-Category Auto-Delete | Customizable retention per data type |
+| Web-Based Config | Alerts, cameras, toggles, auto-delete — all from browser |
+| Space-Efficient Storage | Compressed images, configurable quality |
+| Crowd Detection | Alerts when people count exceeds threshold |
+| Webhook Support | POST alerts to any external endpoint |
+| REST API | Full programmatic access to all data |
+| Visitor Analytics | Repeat visitor tracking, categorization |
+| Report Generation | On-demand or scheduled daily reports |
+| Hot-Reload Config | Change settings without restart |
+
 
 ---
 
@@ -31,1069 +44,1083 @@ An open-source, self-hosted CCTV monitoring system that turns ordinary cameras i
 
 - [Quick Start](#quick-start)
 - [Windows Desktop App](#windows-desktop-app)
-- [Platform Support](#platform-support)
-- [Features Overview](#features-overview)
+- [Web Dashboard](#web-dashboard)
 - [Camera Setup](#camera-setup)
 - [Face Recognition](#face-recognition)
 - [Number Plate Recognition](#number-plate-recognition)
 - [Alerts Setup](#alerts-setup)
 - [Telegram Bot Commands](#telegram-bot-commands)
-- [Web Dashboard](#web-dashboard)
+- [Auto-Delete Settings](#auto-delete-settings)
 - [Building Windows EXE](#building-windows-exe)
+- [Creating Windows Installer](#creating-windows-installer)
+- [Platform Support](#platform-support)
+- [API Reference](#api-reference)
 - [Configuration Reference](#configuration-reference)
 - [Storage & Data](#storage--data)
 - [System Requirements](#system-requirements)
 - [Project Structure](#project-structure)
 - [Troubleshooting](#troubleshooting)
 - [FAQ](#faq)
+- [Command Line Reference](#command-line-reference)
+- [Customization Guide](#customization-guide)
+- [Contributing & License](#contributing--license)
 
 ---
+
 
 ## Quick Start
 
-### Windows (Full Step-by-Step)
+### Windows (Recommended)
 
-**You need to install 3 things in this exact order:**
+**Step 1: Install Python 3.9+**
 
-#### Step 1: Install Python
+Download from [python.org](https://www.python.org/downloads/).  
+> **Important:** Check ✅ "Add Python to PATH" during installation.
 
-1. Go to **https://www.python.org/downloads/**
-2. Click **"Download Python 3.12.x"** (or latest)
-3. Run the installer
-4. **IMPORTANT:** Check ✅ **"Add Python to PATH"** at the bottom of installer
-5. Click **"Install Now"**
-6. Wait for install to finish
-7. Verify: Open Command Prompt (`Win + R` → type `cmd` → Enter) and type:
-   ```
-   python --version
-   ```
-   You should see something like `Python 3.12.x`
+**Step 2: Install Visual Studio C++ Build Tools**
 
-#### Step 2: Install Visual Studio C++ Build Tools
+Required for `dlib` (face recognition engine).
 
-This is **required** for face recognition (dlib library).
+1. Download [Visual Studio Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/)
+2. Select **"Desktop development with C++"**
+3. Install and restart your PC
 
-1. Go to **https://visualstudio.microsoft.com/visual-cpp-build-tools/**
-2. Click **"Download Build Tools"**
-3. Run the downloaded file (`vs_BuildTools.exe`)
-4. In the installer window, check ✅ **"Desktop development with C++"**
-5. Click **"Install"** (bottom right)
-6. Wait for installation (~6 GB download, takes 5-10 minutes)
-7. **Restart your computer** after installation
+**Step 3: Install Git**
 
-#### Step 3: Install Git (for downloading the project)
+Download from [git-scm.com](https://git-scm.com/download/win).  
+Alternative: Download this project as ZIP from GitHub → Extract.
 
-1. Go to **https://git-scm.com/download/win**
-2. Download and run the installer
-3. Click "Next" through all options (defaults are fine)
-4. After install, open a **new** Command Prompt and verify:
-   ```
-   git --version
-   ```
-
-#### Step 4: Download & Install CCTV Smart Monitor
-
-Open Command Prompt and run these commands **one by one**:
+**Step 4: Clone & Install**
 
 ```bash
-# Download the project
-git clone https://github.com/akshargangoli/CCTV.git
-
-# Go into the folder
+git clone https://github.com/yourusername/CCTV.git
 cd CCTV
-
-# Create virtual environment
 python -m venv venv
-
-# Activate it
 venv\Scripts\activate
-
-# Install all packages (takes 5-10 minutes)
 pip install -r requirements.txt
 ```
 
-**If you get any errors during pip install:**
-- Make sure Visual Studio Build Tools is installed (Step 2)
-- Make sure you restarted your computer after installing it
-- Try running Command Prompt as **Administrator** (right-click → Run as administrator)
-
-#### Step 5: Run the Application
+**Step 5: Run**
 
 ```bash
-# Make sure venv is activated
-venv\Scripts\activate
-
-# Option A: Desktop App (GUI window)
+# Desktop GUI (recommended for Windows)
 python desktop_app.py
 
-# Option B: Console Mode
+# OR headless mode with web dashboard
 python main.py --demo
-
-# Option C: Double-click START_APP.bat
 ```
 
-#### Step 6: Open Dashboard
+**Step 6: Open Dashboard**
 
-1. Open your browser
-2. Go to: **http://localhost:5000**
-3. Login: **admin** / **admin123**
-
----
-
-### Without Git (Alternative Download)
-
-If you don't want to install Git:
-
-1. Go to **https://github.com/akshargangoli/CCTV**
-2. Click the green **"Code"** button
-3. Click **"Download ZIP"**
-4. Extract the ZIP to a folder (e.g., `C:\Users\YourName\CCTV`)
-5. Open Command Prompt, navigate to that folder:
-   ```
-   cd C:\Users\YourName\CCTV
-   ```
-6. Continue from Step 4 above (create venv, install, run)
+Navigate to `http://localhost:5000`  
+Login: `admin` / `admin123`
 
 ---
+
 
 ### macOS
 
 ```bash
-# Install Homebrew
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-
-# Install Python, cmake, git
-brew install python cmake git
-
-# Download project
-git clone https://github.com/akshargangoli/CCTV.git
+brew install python cmake
+git clone https://github.com/yourusername/CCTV.git
 cd CCTV
-
-# Create virtual environment
 python3 -m venv venv
 source venv/bin/activate
-
-# Install all packages
 pip install -r requirements.txt
-
-# Run
-python3 desktop_app.py
+python3 main.py --demo
 ```
 
 ### Linux (Ubuntu/Debian)
 
 ```bash
-# Install system dependencies
 sudo apt update
-sudo apt install -y python3 python3-pip python3-venv python3-tk
-sudo apt install -y cmake build-essential libopenblas-dev liblapack-dev
-sudo apt install -y libgtk-3-dev libx11-dev git
-
-# Download project
-git clone https://github.com/akshargangoli/CCTV.git
+sudo apt install python3 python3-venv python3-pip cmake build-essential libopencv-dev
+git clone https://github.com/yourusername/CCTV.git
 cd CCTV
-
-# Run setup script (does everything)
-bash setup.sh
-
-# Activate and run
+python3 -m venv venv
 source venv/bin/activate
-python3 desktop_app.py
+pip install -r requirements.txt
+python3 main.py --demo
 ```
 
 ### Raspberry Pi
 
 ```bash
-# Update system
-sudo apt update && sudo apt upgrade -y
-
-# Install dependencies
-sudo apt install -y python3 python3-pip python3-venv python3-tk
-sudo apt install -y cmake build-essential libatlas-base-dev
-sudo apt install -y libhdf5-dev libharfbuzz-dev libopenjp2-7
-sudo apt install -y libgtk-3-dev libilmbase-dev libopenexr-dev git
-
-# Download project
-git clone https://github.com/akshargangoli/CCTV.git
+sudo apt update
+sudo apt install python3 python3-venv python3-pip cmake libatlas-base-dev libhdf5-dev
+git clone https://github.com/yourusername/CCTV.git
 cd CCTV
-
-# Setup
-bash setup.sh
+python3 -m venv venv
 source venv/bin/activate
-
-# Run (console mode recommended for Pi)
-python3 main.py
-
-# Or with GUI (if monitor connected)
-python3 desktop_app.py
+pip install -r requirements.txt
+python3 main.py --demo
 ```
 
+> **Tip:** On Raspberry Pi, increase `frame_skip` to 5–8 in `config.yaml` for better performance.
+
 ---
+
 
 ## Windows Desktop App
 
-A native Windows GUI application with live camera feeds, real-time stats, and full system control — no browser needed.
-
-### Launch
+Launch with:
 
 ```bash
-# Install GUI dependency (one time)
-pip install customtkinter
-
-# Run the app
 python desktop_app.py
 ```
 
-Or on Windows, double-click **`START_APP.bat`**
-
-### Interface
+### Interface Layout
 
 ```
-┌──────────────────────────────────────────────────────────────────┐
-│  🎥 CCTV Smart Monitor       [▶️ Start] [🌐 Dashboard] [🌙 Theme] │
-├────────────┬─────────────────────────────────────────────────────┤
-│  📊 Stats  │  📹 Camera Feeds                                     │
-│            │  ┌─────────┐  ┌─────────┐  ┌─────────┐             │
-│  👤 Faces  │  │  CH1    │  │  CH2    │  │  CH3    │             │
-│  🚗 Vehic  │  │ [LIVE]  │  │ [LIVE]  │  │ [LIVE]  │             │
-│  🔢 Plates │  └─────────┘  └─────────┘  └─────────┘             │
-│  🚨 Alerts │  ┌─────────┐  ┌─────────┐  ┌─────────┐             │
-│  🚪 Entry  │  │  CH4    │  │  CH5    │  │  CH6    │             │
-│  🚶 Exits  │  │ [LIVE]  │  │ [LIVE]  │  │ [LIVE]  │             │
-│            │  └─────────┘  └─────────┘  └─────────┘             │
-│  ⚡ Actions │                                                     │
-│  [Telegram]│                                                     │
-│  [Report]  │                                                     │
-│  [Settings]│                                                     │
-│            │                                                     │
-│  🔔 Alerts │                                                     │
-│  [10:30].. │                                                     │
-│  [10:31].. │                                                     │
-├────────────┴─────────────────────────────────────────────────────┤
-│  🟢 System running                         🕐 25/06/2026 3:15 PM │
-└──────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│  CCTV SMART MONITOR                          ● Live   ■ Stop    │
+├──────────┬──────────────────────────────────────────────────────┤
+│          │                                                      │
+│  📺 Live │   ┌─────────────┐  ┌─────────────┐                  │
+│  👤 Faces│   │  Camera 1   │  │  Camera 2   │                  │
+│  🚗 Plates│  │  (Live Feed)│  │  (Live Feed)│                  │
+│  📊 Stats│   └─────────────┘  └─────────────┘                  │
+│  ⚙ Settings│ ┌─────────────┐  ┌─────────────┐                  │
+│  🔔 Alerts│  │  Camera 3   │  │  Camera 4   │                  │
+│          │   │  (Live Feed)│  │  (Live Feed)│                  │
+│          │   └─────────────┘  └─────────────┘                  │
+├──────────┴──────────────────────────────────────────────────────┤
+│  Status: Running | Cameras: 4/4 | Faces Today: 23 | Alerts: 2  │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-### Desktop App Features
+### Desktop Features
 
 | Feature | Description |
 |---------|-------------|
-| Live Camera Grid | 1-16 feeds with auto-layout (1/2/3/4 columns) |
-| Real-time Stats | Faces, vehicles, plates, alerts, entries, exits |
-| One-click Start/Stop | Green button to start, red to stop |
-| Settings Panel | Toggle helmet, mask, night mode, demo mode, port |
-| Dark/Light Theme | Switch instantly |
-| Alert Feed | Scrolling alerts with timestamps |
-| Web Dashboard Link | Opens full web UI in browser |
-| Quick Actions | Test Telegram, Generate Report, Open Settings |
-
-### Three Ways to Use This System
-
-| Method | Best For | How |
-|--------|----------|-----|
-| **Desktop App** | Daily use on your PC (Windows/Mac/Linux) | `python desktop_app.py` or `START_APP.bat` |
-| **Web Dashboard** | Access from any device/phone | Open `http://localhost:5000` |
-| **Telegram Bot** | Quick checks from anywhere | Send commands to your bot |
+| Live Grid View | Up to 16 cameras in responsive grid |
+| Dark Theme | Modern dark interface, easy on eyes |
+| Real-Time Stats | Face count, plates, entries — live |
+| Alert Popup | Sound + popup on threat detection |
+| System Tray | Minimize to tray, runs in background |
+| One-Click Start/Stop | Start/stop monitoring instantly |
 
 ---
 
-## Platform Support
 
-This system runs on **Windows, macOS, Linux, and Raspberry Pi**. The desktop app and all detection features work on every platform.
+## Web Dashboard
 
-### Windows
+Access at `http://localhost:5000` after starting the system.  
+Default credentials: `admin` / `admin123`
 
-```bash
-# Install
-pip install -r requirements.txt
+### Pages
 
-# Run Desktop App (GUI)
-python desktop_app.py
-# Or double-click START_APP.bat
+| Page | Description |
+|------|-------------|
+| **Dashboard** | Real-time stats cards, recent events, camera status overview, entry/exit count |
+| **Cameras** | Live feeds, add/remove cameras, toggle detections per camera, status indicators |
+| **Faces** | All detected faces with thumbnails, click to rename, categorize, blacklist/whitelist |
+| **Vehicles** | Vehicle log with type classification, plate numbers, search & filter, blacklist plates |
+| **Visitors** | Visitor analytics, repeat visitor tracking, category breakdown, frequency charts |
+| **Events** | Alert timeline, threat events, acknowledge/dismiss, filter by severity |
+| **Reports** | Generate on-demand reports, view history, schedule daily summaries |
+| **Settings** | Full system config — cameras, alerts (Telegram/WhatsApp), toggles, auto-delete, storage |
 
-# Run Console Mode
-python main.py
+### Dashboard Features
 
-# Build standalone EXE (no Python needed for end users)
-python build_exe.py
-```
-
-### macOS
-
-```bash
-# Install Homebrew (if not installed)
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-
-# Install Python & dependencies
-brew install python cmake
-pip3 install -r requirements.txt
-
-# Run Desktop App (GUI)
-python3 desktop_app.py
-
-# Run Console Mode
-python3 main.py
-
-# Create macOS App Bundle (optional)
-pip3 install py2app
-python3 setup_mac.py py2app
-```
-
-### Linux (Ubuntu/Debian)
-
-```bash
-# Install system dependencies
-sudo apt update
-sudo apt install -y python3 python3-pip python3-venv python3-tk
-sudo apt install -y cmake build-essential libopenblas-dev
-sudo apt install -y libgtk-3-dev libx11-dev
-
-# Setup
-bash setup.sh
-
-# Activate virtual environment
-source venv/bin/activate
-
-# Run Desktop App (GUI)
-python3 desktop_app.py
-
-# Run Console Mode
-python3 main.py
-
-# Run as background service (auto-start on boot)
-sudo cp cctv-monitor.service /etc/systemd/system/
-sudo systemctl enable cctv-monitor
-sudo systemctl start cctv-monitor
-```
-
-### Linux (Fedora/CentOS/RHEL)
-
-```bash
-# Install dependencies
-sudo dnf install -y python3 python3-pip python3-tkinter
-sudo dnf install -y cmake gcc-c++ openblas-devel
-
-# Setup
-bash setup.sh
-source venv/bin/activate
-
-# Run
-python3 desktop_app.py
-```
-
-### Raspberry Pi
-
-Works on **Raspberry Pi 4** (4GB RAM recommended) and **Raspberry Pi 5**.
-
-```bash
-# Update system
-sudo apt update && sudo apt upgrade -y
-
-# Install dependencies
-sudo apt install -y python3 python3-pip python3-venv python3-tk
-sudo apt install -y cmake build-essential libatlas-base-dev
-sudo apt install -y libhdf5-dev libharfbuzz-dev libopenjp2-7
-sudo apt install -y libgtk-3-dev libilmbase-dev libopenexr-dev
-
-# Setup
-bash setup.sh
-source venv/bin/activate
-
-# Run (headless - no GUI, web dashboard only)
-python3 main.py
-
-# Run with Desktop GUI (if Pi has monitor)
-python3 desktop_app.py
-
-# Run at boot (recommended for Pi)
-sudo cp cctv-monitor.service /etc/systemd/system/
-sudo systemctl enable cctv-monitor
-sudo systemctl start cctv-monitor
-```
-
-#### Raspberry Pi Performance Tips
-
-| Setting | Recommendation |
-|---------|---------------|
-| `frame_skip` | 7-10 (reduce CPU load) |
-| Camera streams | Use **sub-stream** (lower resolution) |
-| Vehicle detection (YOLO) | Disable if too slow (`detect_vehicles: false`) |
-| Max cameras on Pi 4 | 2-4 cameras |
-| Max cameras on Pi 5 | 4-6 cameras |
-| Swap file | Increase to 2GB: `sudo dphys-swapfile swapoff && sudo sed -i 's/CONF_SWAPSIZE=.*/CONF_SWAPSIZE=2048/' /etc/dphys-swapfile && sudo dphys-swapfile swapon` |
-| Cooling | Use heatsink + fan (AI detection heats up the Pi) |
-
-#### Raspberry Pi config.yaml tweaks
-
-```yaml
-app:
-  frame_skip: 8           # Higher = less CPU
-
-cameras:
-  - name: "Gate Camera"
-    source: "rtsp://admin:pass@192.168.1.100:554/Streaming/Channels/102"  # Sub-stream!
-    detect_faces: true
-    detect_plates: true
-    detect_vehicles: false   # Disable heavy YOLO on Pi
-    detect_loitering: true
-    detect_mask: true
-    count_entry_exit: true
-```
+- Auto-refreshing stats (configurable interval)
+- Responsive design — works on mobile, tablet, desktop
+- Security headers (XSS, clickjacking, MIME sniffing protection)
+- Session management with 24-hour expiry
+- API-first architecture — all data available via REST endpoints
+- Dark/professional theme with clean navigation
 
 ---
 
-## Running as Background Service (Linux/Pi)
-
-Create a systemd service to auto-start on boot:
-
-```bash
-# Create service file
-sudo nano /etc/systemd/system/cctv-monitor.service
-```
-
-Paste this:
-
-```ini
-[Unit]
-Description=CCTV Smart Monitor
-After=network.target
-
-[Service]
-Type=simple
-User=pi
-WorkingDirectory=/home/pi/CCTV
-ExecStart=/home/pi/CCTV/venv/bin/python3 main.py
-Restart=always
-RestartSec=10
-Environment=DISPLAY=:0
-
-[Install]
-WantedBy=multi-user.target
-```
-
-```bash
-# Enable and start
-sudo systemctl daemon-reload
-sudo systemctl enable cctv-monitor
-sudo systemctl start cctv-monitor
-
-# Check status
-sudo systemctl status cctv-monitor
-
-# View logs
-journalctl -u cctv-monitor -f
-```
-
----
-
-## Accessing from Other Devices
-
-Once running on any platform, access from **any device** on your network:
-
-| Device | How to Access |
-|--------|--------------|
-| **Same PC** | `http://localhost:5000` |
-| **Phone (same WiFi)** | `http://YOUR_PC_IP:5000` |
-| **Tablet** | `http://YOUR_PC_IP:5000` |
-| **Other PC** | `http://YOUR_PC_IP:5000` |
-| **Outside home** | Use [Tailscale](https://tailscale.com) (free VPN) or port forwarding |
-
-Find your IP:
-- **Windows:** `ipconfig` → look for IPv4 Address
-- **Mac:** `ifconfig en0` → look for inet
-- **Linux/Pi:** `hostname -I`
-
----
-
-## Features Overview
-
-### Detection Capabilities
-
-| Feature | Description | Alert Type |
-|---------|-------------|------------|
-| Face Recognition | Detect, store, identify, blacklist/whitelist | Telegram photo |
-| Mask Detection | Person with covered face | Photo to Telegram + WhatsApp message |
-| Number Plates (ANPR) | Indian format — all states | Log + blacklist alert |
-| Vehicle Classification | 6 vehicle types for Indian roads | Log |
-| Helmet Detection | Two-wheeler riders without helmet | Configurable |
-| Loitering | Person in same area too long | Telegram + WhatsApp |
-| Crowd Detection | Too many people in frame | Telegram + WhatsApp |
-| Motion Anomaly | Sudden unusual movement | Log + alert |
-
-### Per-Camera Selective Detection
-
-Each camera channel can be independently configured:
-
-```yaml
-- name: "Front Gate"
-  detect_faces: true
-  detect_plates: true
-  detect_vehicles: true
-  detect_loitering: true
-  detect_mask: true
-  count_entry_exit: true
-```
-
-Only enable what you need per camera to optimize performance.
-
----
 
 ## Camera Setup
 
-### Supported Input Types
+### Supported Camera Types
 
-| Type | Source | Example |
-|------|--------|---------|
-| RTSP | IP cameras | `rtsp://admin:pass@192.168.1.100:554/stream1` |
-| USB | Webcams | `0` (first webcam), `1` (second) |
-| HTTP | MJPEG streams | `http://192.168.1.100:8080/video` |
-| File | Video files | `demo_videos/sample.mp4` |
+| Type | Source Format | Example |
+|------|--------------|---------|
+| RTSP | `rtsp://user:pass@IP:port/path` | IP cameras, NVRs |
+| USB | `0`, `1`, `2` (device index) | Webcams, USB cameras |
+| HTTP | `http://IP:port/video` | HTTP MJPEG streams |
+| File | `/path/to/video.mp4` | Pre-recorded video files |
 
-### Common Indian Camera Brands
+### Indian Brand RTSP URLs
 
 | Brand | RTSP URL Format |
-|-------|-----------------|
-| Hikvision | `rtsp://admin:pass@IP:554/Streaming/Channels/101` |
-| Dahua / CP Plus | `rtsp://admin:pass@IP:554/cam/realmonitor?channel=1&subtype=0` |
-| Reolink | `rtsp://admin:pass@IP:554/h264Preview_01_main` |
-| Uniview | `rtsp://admin:pass@IP:554/unicast/c1/s0/live` |
-| Godrej | `rtsp://admin:pass@IP:554/cam/realmonitor?channel=1` |
+|-------|----------------|
+| **Hikvision** | `rtsp://admin:password@192.168.1.64:554/Streaming/Channels/101` |
+| **Dahua** | `rtsp://admin:password@192.168.1.108:554/cam/realmonitor?channel=1&subtype=0` |
+| **CP Plus** | `rtsp://admin:password@192.168.1.10:554/cam/realmonitor?channel=1&subtype=1` |
+| **Reolink** | `rtsp://admin:password@192.168.1.100:554/h264Preview_01_main` |
+| **Uniview** | `rtsp://admin:password@192.168.1.13:554/unicast/c1/s0/live` |
+| **Godrej** | `rtsp://admin:password@192.168.1.50:554/live/ch0` |
 
 ### Using Phone as Camera
 
-1. Install **IP Webcam** (Android) from Play Store
-2. Open app, tap "Start Server"
-3. Add to config: `source: "http://PHONE_IP:8080/video"`
+Use apps like **IP Webcam** (Android) or **EpocCam** (iOS):
 
-### Adding Cameras via Web Dashboard
+1. Install the app on your phone
+2. Start the stream — note the IP address shown
+3. Add to config: `http://192.168.1.5:8080/video`
 
-1. Go to **Settings** page
-2. Click **Add Camera**
-3. Fill in name, URL, type
-4. Select which detections to enable
-5. Done — camera starts immediately
+### Per-Camera Detection Config
+
+Each camera can have individual detection toggles:
+
+```yaml
+cameras:
+  - name: "Main Gate"
+    source: "rtsp://admin:pass@192.168.1.101:554/stream1"
+    type: "rtsp"
+    enabled: true
+    detect_faces: true       # Face recognition
+    detect_plates: true      # Number plate reading
+    detect_vehicles: true    # Vehicle classification
+    detect_loitering: true   # Loitering/threat detection
+    detect_mask: true        # Mask detection
+    count_entry_exit: true   # People counting
+```
+
+> All toggles can also be changed from the Web Dashboard → Settings page without editing files.
 
 ---
+
 
 ## Face Recognition
 
 ### How It Works
 
-1. Camera detects a face
-2. System creates a unique encoding (fingerprint)
-3. Compares with all known faces in database
-4. If match found → identifies person
-5. If new → saves as "Unknown" for you to name later
+1. **Detect** — AI locates faces in each frame
+2. **Encode** — Face is converted to a 128-dimension vector
+3. **Compare** — Compared against known faces database
+4. **Match or Save** — If recognized → log visit; if unknown → auto-save with thumbnail
+5. **Alert** — If blacklisted face → instant Telegram/WhatsApp alert with photo
 
 ### Naming Faces
 
-**Option 1: Web Dashboard (Recommended)**
-- Go to **Faces** page
-- New faces show a red "NEW" badge
-- Click any face → type their name → select category → Save
-- System recognizes them automatically from now on
+**Method 1: Web Dashboard**
+- Go to Faces page → click any face thumbnail → type name → select category → Save
 
-**Option 2: Pre-load Photos**
+**Method 2: Pre-load known faces**
 - Place photos in `known_faces/` folder
-- Name format: `person_name.jpg`
-- Examples: `rahul_sharma.jpg`, `guard_ramesh.jpg`
-- System loads them on startup
+- Naming format: `person_name.jpg` (e.g., `rahul_sharma.jpg`)
+- System loads these on startup
 
 ### Face Categories
 
-| Category | Use Case |
-|----------|----------|
-| Resident | Family, permanent staff |
-| Visitor | Expected guests |
-| Delivery | Delivery persons |
-| Suspicious | Blacklisted — triggers instant alert |
-| Unknown | Not yet identified |
+| Category | Description | Auto-Delete |
+|----------|-------------|-------------|
+| Resident | Building residents, family members | Never |
+| Visitor | Regular visitors, guests | Never |
+| Delivery | Delivery personnel (Swiggy, Zomato, Amazon) | Never |
+| Suspicious | Flagged individuals | Never |
+| Blacklist | Alert immediately on detection | Never |
+| Whitelist | Trusted, suppress alerts | Never |
+| Unknown | Unidentified faces (auto-saved) | Never |
 
-### Data Retention
+> Face data is **never auto-deleted** by default (retention = 0). Change in Settings → Auto-Delete.
 
-Face data is stored **forever** (lifetime). It is never auto-deleted. All other data (events, plates, vehicles) is auto-cleaned after 30 days (configurable).
+### Configuration
+
+```yaml
+face_recognition:
+  tolerance: 0.6          # Lower = stricter matching (0.4-0.7)
+  min_face_size: 20       # Minimum face pixel size
+  save_unknown_faces: true
+  cooldown_seconds: 30    # Avoid duplicate alerts
+```
 
 ---
+
 
 ## Number Plate Recognition
 
-### Supported Format
+### Indian Format Support
 
-Indian standard: `STATE DISTRICT SERIES NUMBER`
+Reads all Indian registration plate formats:
+- Standard: `MH 12 AB 1234`
+- BH Series: `BH 01 AA 1234`
+- Commercial: Yellow/green plates
+- Temporary: `MH 01 T 1234`
 
-| Example | State |
-|---------|-------|
-| MH 12 AB 1234 | Maharashtra |
-| DL 01 CA 5678 | Delhi |
-| KA 05 MN 9012 | Karnataka |
-| TN 22 AB 3456 | Tamil Nadu |
-| UP 80 XY 7890 | Uttar Pradesh |
+### All 36 States & UTs Supported
 
-All 36 states and union territories are supported.
+```
+AN AP AR AS BR CG CH DD DL GA GJ HP HR JH JK
+KA KL LA LD MH ML MN MP MZ NL OD PB PY RJ SK
+TN TR TS UK UP WB
+```
 
-### Best Camera Placement for Plates
+### Best Camera Placement Tips
 
-- Height: 1 to 1.5 meters (plate level)
-- Distance: 2 to 8 meters from vehicle
-- Resolution: 720p minimum, 1080p recommended
-- Avoid direct sunlight glare
+| Tip | Reason |
+|-----|--------|
+| Mount at 1–1.5m height | Aligns with plate level |
+| 15–30° angle max | Avoids perspective distortion |
+| Good lighting (IR at night) | Plates need contrast |
+| 3–5m distance | Optimal character resolution |
+| Avoid direct sunlight behind | Prevents glare/washout |
+| Minimum 720p resolution | Enough pixels for OCR |
+
+### Configuration
+
+```yaml
+anpr:
+  enabled: true
+  save_plate_images: true
+  confidence: 0.5    # Minimum OCR confidence (0.0-1.0)
+```
 
 ---
 
+
 ## Alerts Setup
 
-### Telegram (Free — Recommended)
+### Telegram Setup (Step by Step)
 
-1. Open Telegram → search `@BotFather` → send `/newbot`
-2. Copy the **Bot Token**
-3. Search `@userinfobot` → send any message → copy your **Chat ID**
-4. Edit `config.yaml`:
+1. **Create Bot:**
+   - Open Telegram → search `@BotFather`
+   - Send `/newbot` → follow prompts → copy the **Bot Token**
 
-```yaml
-alerts:
-  telegram:
-    enabled: true
-    bot_token: "YOUR_BOT_TOKEN"
-    chat_id: "YOUR_CHAT_ID"
-    send_photo: true
-    two_way_enabled: true
-```
+2. **Get Your Chat ID:**
+   - Open Telegram → search `@userinfobot`
+   - Send `/start` → it replies with your **Chat ID** (a number)
 
-5. Test: `python main.py --test-alerts`
+3. **Configure:**
 
-### WhatsApp (via Twilio)
+   **Option A: Web Dashboard**
+   - Go to Settings page → Telegram section → paste token & chat ID → Enable → Save
 
-1. Sign up at [twilio.com](https://www.twilio.com) (free trial available)
-2. Set up WhatsApp sandbox
-3. Edit `config.yaml`:
+   **Option B: config.yaml**
+   ```yaml
+   alerts:
+     telegram:
+       enabled: true
+       bot_token: "123456789:ABCdefGHIjklMNOpqrsTUVwxyz"
+       chat_id: "987654321"
+       send_photo: true
+       two_way_enabled: true
+   ```
+
+4. **Test:** Click "Test Telegram" on Settings page or run `python main.py --test-alerts`
+
+### WhatsApp Setup (via Twilio)
+
+1. Create account at [twilio.com](https://www.twilio.com/)
+2. Activate Twilio Sandbox for WhatsApp
+3. Note your **Account SID**, **Auth Token**, and **From Number**
+4. Configure in web dashboard or config.yaml:
 
 ```yaml
 alerts:
   whatsapp:
     enabled: true
-    account_sid: "YOUR_SID"
-    auth_token: "YOUR_TOKEN"
+    account_sid: "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+    auth_token: "your_auth_token_here"
     from_number: "whatsapp:+14155238886"
     to_number: "whatsapp:+91XXXXXXXXXX"
 ```
 
-### What Triggers Alerts
+### Alert Types
 
-| Event | Telegram | WhatsApp | Includes Photo |
-|-------|----------|----------|----------------|
-| Blacklisted face detected | Yes | Yes | Yes |
-| Masked person detected | Yes | Yes | Yes |
-| Blacklisted vehicle detected | Yes | Yes | No |
-| Loitering | Yes | Yes | No |
-| Crowd limit exceeded | Yes | Yes | No |
-| Daily summary | Yes | Yes | No |
+| Alert | Trigger | Channels |
+|-------|---------|----------|
+| Blacklisted Face | Known threat detected | Telegram + WhatsApp (with photo) |
+| Blacklisted Plate | Flagged vehicle detected | Telegram + WhatsApp |
+| No Helmet | Rider without helmet | Telegram |
+| No Mask | Person without mask | Telegram + WhatsApp (with photo) |
+| Loitering | Person lingering too long | Telegram |
+| Crowd | Exceeds max people threshold | Telegram |
 
 ---
+
 
 ## Telegram Bot Commands
 
-Send these to your bot for instant info:
+Send these commands to your bot from Telegram:
 
 | Command | Response |
 |---------|----------|
-| `/status` | System status, cameras online/offline |
-| `/summary` | Today's detection stats |
-| `/cameras` | All camera names and status |
+| `/start` | Welcome message with system info |
+| `/status` | System status — cameras online/offline, uptime |
+| `/summary` | Today's quick summary — faces, plates, events |
+| `/cameras` | List all cameras with connection status |
 | `/count` | Entry/exit count for today |
-| `/alerts` | Last 5 security alerts |
+| `/alerts` | Last 5 alert events |
 | `/faces` | Face detection statistics |
-| `/plates` | Last 5 number plates detected |
-| `/report` | Generate and send daily report now |
-| `/help` | Show all commands |
+| `/plates` | Last 5 detected number plates |
+| `/report` | Generate and send daily report instantly |
+| `/help` | Show all available commands |
+
+> The bot only responds to messages from your configured `chat_id` for security.
 
 ---
 
-## Web Dashboard
+## Auto-Delete Settings
 
-Access at `http://localhost:5000` (or `http://YOUR_IP:5000` from any device on your network).
+Per-category data retention. Set to `0` to keep forever.
 
-**Architecture:** Flask app factory pattern (`create_app(monitor)`) with clean separation of concerns. Professional-grade with security headers, error handling middleware, health checks, and graceful degradation.
+| Category | Default | Description |
+|----------|---------|-------------|
+| `faces` | **0 (never)** | Face recognition data & images |
+| `visitors` | **0 (never)** | Visitor log & analytics |
+| `vehicles` | 30 days | Vehicle detection records |
+| `number_plates` | 30 days | Plate recognition records |
+| `events` | 30 days | Alert & threat events |
+| `recordings` | 14 days | Video clips & snapshots |
+| `entry_exit` | 30 days | Entry/exit counting data |
+| `daily_stats` | 90 days | Daily summary reports |
 
-### Pages
+### How to Customize
 
-| Page | Route | Purpose |
-|------|-------|---------|
-| Dashboard | `/` | Today's stats, camera status, recent alerts |
-| Cameras | `/cameras` | Live feeds, camera management |
-| Faces | `/faces` | View, rename, categorize, blacklist/whitelist |
-| Vehicles | `/plates` | Vehicle tracking + plate search |
-| Visitors | `/visitors` | Visitor analytics & frequency tracking |
-| Events | `/events` | Security events with acknowledge/dismiss |
-| Reports | `/reports` | Report generation & history |
-| Settings | `/settings` | Full system configuration panel |
+**From Web Dashboard:**  
+Settings → Auto-Delete section → adjust days per category → Save
 
-### Settings Page Features
+**From config.yaml:**
 
-- **Camera Management:** Add/remove cameras (up to 16), per-camera detection toggles
-- **Alert Credentials:** Telegram (bot_token, chat_id, enabled), WhatsApp (account_sid, auth_token, from/to numbers, enabled)
-- **Auto-Delete Rules:** Per-category retention (faces, vehicles, plates, events, recordings, visitors, entry_exit, daily_stats) — set days or 0 for never
-- **Global Toggles:** Helmet detection, Mask detection, Night mode
-- **Storage Overview:** Current database size and usage
+```yaml
+storage:
+  auto_delete:
+    faces: 0           # 0 = never delete
+    vehicles: 30       # delete after 30 days
+    number_plates: 30
+    events: 30
+    recordings: 14
+    visitors: 0        # 0 = never delete
+    entry_exit: 30
+    daily_stats: 90
+```
 
-### REST API Reference
+> Auto-cleanup runs daily at 3:00 AM automatically.
 
-All API endpoints return JSON. Authentication required (session-based).
+---
 
-#### Dashboard & Stats
+
+## Building Windows EXE
+
+Create a standalone `.exe` that runs without Python installed:
+
+```bash
+# Activate virtual environment
+venv\Scripts\activate
+
+# Run the build script
+build_exe.bat
+```
+
+Or manually:
+
+```bash
+pip install pyinstaller
+python build_exe.py
+```
+
+Output: `dist/CCTVSmartMonitor.exe`
+
+> The EXE bundles all dependencies. File size ~150–200 MB.
+
+---
+
+## Creating Windows Installer
+
+Professional installer with Next → Next → Install experience:
+
+### Prerequisites
+
+1. Install [Inno Setup](https://jrsoftware.org/isdl.php) (free)
+2. Build the EXE first (see above)
+
+### Build Installer
+
+```bash
+cd installer
+build_installer.bat
+```
+
+Or open `installer/CCTVSmartMonitor.iss` in Inno Setup → Compile.
+
+### What Users See
+
+1. Welcome screen with app logo
+2. License agreement
+3. Choose install directory
+4. Select Start Menu folder
+5. Create desktop shortcut option
+6. Install progress bar
+7. Finish — Launch application
+
+Output: `installer/Output/CCTVSmartMonitor_Setup.exe`
+
+---
+
+
+## Platform Support
+
+### Windows 10/11
+
+```bash
+python desktop_app.py      # GUI mode
+python main.py             # Headless + web dashboard
+```
+
+### macOS (Intel & Apple Silicon)
+
+```bash
+brew install cmake
+pip install -r requirements.txt
+python3 main.py --demo
+```
+
+### Linux (Ubuntu 20.04+, Debian 11+)
+
+```bash
+sudo apt install cmake build-essential libopencv-dev
+pip install -r requirements.txt
+python3 main.py
+```
+
+#### Run as systemd Service
+
+```bash
+sudo cp cctv-monitor.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable cctv-monitor
+sudo systemctl start cctv-monitor
+```
+
+Check status:
+```bash
+sudo systemctl status cctv-monitor
+journalctl -u cctv-monitor -f
+```
+
+### Raspberry Pi (3B+/4/5)
+
+```bash
+sudo apt install cmake libatlas-base-dev libhdf5-dev libjasper-dev
+pip install -r requirements.txt
+python3 main.py
+```
+
+**Performance tips for Pi:**
+- Set `frame_skip: 5` or higher
+- Use 1–2 cameras max
+- Disable vehicle detection if not needed
+- Use sub-stream (lower resolution) RTSP URLs
+
+---
+
+
+## API Reference
+
+All endpoints require authentication (session cookie). Prefix: `http://localhost:5000`
+
+### Dashboard & Stats
+
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/summary` | Today's statistics |
-| GET | `/api/events?limit=20` | Recent events |
-| GET | `/api/cameras` | Camera status list |
-| GET | `/api/entry_exit` | Entry/exit people count |
+| GET | `/api/summary` | Today's summary statistics |
+| GET | `/api/events` | Recent events (query: `?limit=20`) |
+| GET | `/api/cameras` | All camera statuses |
+| GET | `/api/entry_exit` | Today's entry/exit count |
+| GET | `/api/health` | System health check (public) |
 
-#### Face Management
+### Face Management
+
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/faces?category=visitor` | Face list with filter |
-| POST | `/api/faces/<id>/rename` | Rename face `{"name":"...", "category":"..."}` |
+| GET | `/api/faces` | List faces (query: `?category=visitor`) |
+| POST | `/api/faces/<id>/rename` | Rename face. Body: `{"name": "...", "category": "..."}` |
 | POST | `/api/faces/<id>/blacklist` | Blacklist a face |
 | POST | `/api/faces/<id>/whitelist` | Whitelist a face |
 
-#### Vehicles & Plates
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/vehicles?type=car` | Vehicle list with type filter |
-| GET | `/api/plates/search?q=MH12` | Search plates |
-| POST | `/api/plates/<plate>/blacklist` | Blacklist a plate |
+### Vehicles & Plates
 
-#### Events & Reports
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | `/api/events/<id>/acknowledge` | Dismiss an event |
+| GET | `/api/vehicles` | List vehicles (query: `?type=car`) |
+| GET | `/api/plates/search` | Search plates (query: `?q=MH12`) |
+| POST | `/api/plates/<number>/blacklist` | Blacklist a plate number |
+
+### Events & Reports
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/events/<id>/acknowledge` | Acknowledge/dismiss event |
 | POST | `/api/report/generate` | Generate report on demand |
 
-#### Alert Testing
+### Camera Management
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/cameras/add` | Add camera (body: camera config JSON) |
+| POST | `/api/cameras/remove` | Remove camera (body: `{"index": 0}`) |
+| POST | `/api/cameras/toggle` | Toggle detection (body: `{"index":0,"field":"detect_faces","value":true}`) |
+
+### Settings
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/settings/toggle` | Toggle feature (body: `{"feature":"helmet_detection","value":true}`) |
+| POST | `/api/settings/alerts` | Save alert credentials (Telegram/WhatsApp) |
+| POST | `/api/settings/auto_delete` | Save retention days per category |
+
+### Testing
+
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | POST | `/api/test/telegram` | Send test Telegram message |
 | POST | `/api/test/whatsapp` | Send test WhatsApp message |
 
-#### Camera Management
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/cameras/add` | Add camera `{"name":"...", "source":"...", ...}` |
-| POST | `/api/cameras/remove` | Remove camera `{"index": 0}` |
-| POST | `/api/cameras/toggle` | Toggle feature `{"index":0, "field":"detect_faces", "value":true}` |
-
-#### Settings
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/settings/toggle` | Global toggle `{"feature":"night_mode", "value":true}` |
-| POST | `/api/settings/alerts` | Save alert creds `{"telegram":{...}, "whatsapp":{...}}` |
-| POST | `/api/settings/auto_delete` | Save retention `{"faces":0, "vehicles":30, ...}` |
-
-#### System
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/health` | Health check (public, no auth) |
-| GET | `/api/system/status` | Detailed system status |
-
-#### Video Stream
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/video_feed/<camera_name>` | MJPEG live stream |
-
-### Customization
-
-Edit the `APP_CONFIG` dictionary at the top of `web/app.py` to quickly customize:
-
-```python
-APP_CONFIG = {
-    "SECRET_KEY": "your-secret-key",
-    "MAX_CAMERAS": 16,
-    "VIDEO_JPEG_QUALITY": 50,      # 1-100, lower = smaller
-    "VIDEO_FPS_DELAY": 0.033,      # ~30fps
-    "DEFAULT_EVENT_LIMIT": 20,
-    "DEFAULT_FACE_LIMIT": 200,
-    "DEFAULT_PLATE_LIMIT": 100,
-    "DEFAULT_VISITOR_LIMIT": 100,
-}
-```
-
 ---
 
-## Building Windows EXE
-
-Create a standalone Windows application — no Python required on target machine.
-
-### Build Steps
-
-```bash
-# On Windows with Python installed:
-# Option 1: Double-click
-build_exe.bat
-
-# Option 2: Command line
-python build_exe.py
-```
-
-### Output
-
-```
-dist/CCTVSmartMonitor/
-├── CCTVSmartMonitor.exe   ← Main application
-├── START.bat              ← Double-click to run
-├── START_DEMO.bat         ← Test without cameras
-├── HOW_TO_USE.txt         ← User instructions
-├── config.yaml            ← Edit settings here
-├── known_faces/           ← Add face photos
-└── web/                   ← Dashboard files
-```
-
-Share the entire folder. Users just double-click `START.bat`.
-
----
 
 ## Configuration Reference
 
-All settings are in `config.yaml`. Key sections:
+All settings live in `config.yaml`. Every setting can also be changed from the web dashboard.
 
-| Section | Controls |
-|---------|----------|
-| `app` | Demo mode, frame skip, country |
-| `cameras` | Camera list (1-16), sources, per-camera detections |
-| `face_recognition` | Tolerance, cooldown, min size |
-| `mask_detection` | Enable/disable, alert channels |
-| `anpr` | Plate confidence, save images |
-| `vehicle_detection` | Types, helmet toggle |
-| `threat_detection` | Loitering time, crowd limit, motion sensitivity |
-| `entry_exit` | Line position, direction, reset time |
-| `night_mode` | Auto-detect, schedule, enhancement level |
-| `alerts` | Telegram, WhatsApp, sound, webhook |
-| `daily_report` | Time, channels, PDF toggle |
-| `storage` | Cleanup days, max size, compression |
-| `web` | Port, host, credentials |
+### General
+
+```yaml
+app:
+  name: "Smart CCTV Monitor"
+  demo_mode: true         # true = no real cameras needed
+  frame_skip: 3           # Process every Nth frame (higher = less CPU)
+  country: "india"
+  max_cameras: 16
+```
+
+### Face Recognition
+
+```yaml
+face_recognition:
+  tolerance: 0.6          # Match threshold (0.4=strict, 0.7=lenient)
+  min_face_size: 20       # Minimum face size in pixels
+  save_unknown_faces: true
+  cooldown_seconds: 30    # Seconds between duplicate alerts
+```
+
+### ANPR (Number Plates)
+
+```yaml
+anpr:
+  enabled: true
+  save_plate_images: true
+  confidence: 0.5         # OCR confidence threshold
+```
+
+### Vehicle Detection
+
+```yaml
+vehicle_detection:
+  enabled: true
+  types: [car, motorcycle, bus, truck, auto_rickshaw, bicycle]
+  helmet_detection: false  # Toggle helmet detection
+  save_vehicle_images: true
+```
+
+### Threat Detection
+
+```yaml
+threat_detection:
+  enabled: true
+  loitering:
+    enabled: true
+    time_threshold: 120    # Seconds before loitering alert
+    area_threshold: 100    # Pixel movement threshold
+  motion_sensitivity: 0.5
+  crowd:
+    enabled: true
+    max_people: 10         # Alert if more than this
+```
+
+### Night Mode
+
+```yaml
+night_mode:
+  enabled: true
+  auto_detect: true       # Automatically detect low-light
+  schedule:
+    start: "18:00"
+    end: "06:00"
+  enhancement_level: 2    # 1=light, 2=medium, 3=heavy
+```
+
+### Entry/Exit Counting
+
+```yaml
+entry_exit:
+  enabled: true
+  line_position: 0.5      # Counting line position (0.0-1.0)
+  line_direction: "horizontal"
+  daily_reset_time: "00:00"
+```
+
+### Web Dashboard
+
+```yaml
+web:
+  enabled: true
+  port: 5000
+  host: "0.0.0.0"        # 0.0.0.0 = accessible from network
+  auth:
+    enabled: true
+    username: "admin"
+    password: "admin123"  # Change this!
+  allow_camera_config: true
+  allow_alert_config: true
+```
+
+### Storage
+
+```yaml
+storage:
+  database: "storage/cctv_monitor.db"
+  compress_images: true
+  image_quality: 60       # JPEG quality (1-100, lower = smaller)
+  max_storage_mb: 5000    # Alert when storage exceeds this
+```
 
 ---
+
 
 ## Storage & Data
 
 ### What Gets Stored
 
-| Data | Size | Retention |
-|------|------|-----------|
-| Face encoding + thumbnail | ~5 KB per face | **Forever** |
-| Number plate text + crop | ~10 KB per plate | 30 days (configurable) |
-| Vehicle record | ~1 KB | 30 days |
-| Event/alert record | ~1 KB | 30 days |
-| Event video clip | ~2 MB (only on alert) | 30 days |
+| Data Type | Location | Format |
+|-----------|----------|--------|
+| Database | `storage/cctv_monitor.db` | SQLite |
+| Face images | `storage/faces/` | JPEG (compressed) |
+| Plate images | `storage/plates/` | JPEG (compressed) |
+| Vehicle images | `storage/vehicles/` | JPEG (compressed) |
+| Recordings | `recordings/` | MP4/AVI clips |
+| Reports | `reports/` | JSON/PDF |
+| Logs | `logs/` | Text files |
 
-### Space Example
+### Estimated Storage Usage
 
-1000 faces + 500 plates + 100 events per day = **~15 MB/day** for non-face data (auto-cleaned after 30 days).
+| Data Type | Per Event | Per Day (avg) |
+|-----------|-----------|---------------|
+| Face image | ~15 KB | ~1.5 MB (100 faces) |
+| Plate image | ~20 KB | ~400 KB (20 plates) |
+| Vehicle image | ~25 KB | ~2.5 MB (100 vehicles) |
+| Database record | ~0.5 KB | ~50 KB |
+| Video clip (10s) | ~2 MB | ~20 MB (10 clips) |
 
-Face data grows but slowly: 1000 unique faces = only **5 MB total** (stored forever).
+### Space Management
+
+- Images compressed at configurable quality (default: 60%)
+- Auto-delete removes old data per schedule
+- Storage warning at configurable threshold (default: 5 GB)
+- Manual cleanup available via API
 
 ---
+
 
 ## System Requirements
 
+### Minimum Specifications
+
 | Component | Minimum | Recommended |
 |-----------|---------|-------------|
-| OS | Windows 10 / Ubuntu 20 / macOS 12 / Pi OS 64-bit | Windows 11 / Ubuntu 22 / macOS 14 |
-| CPU | Intel i3 / Ryzen 3 / Pi 4 | Intel i5 / Ryzen 5 / Pi 5 |
-| RAM | 4 GB | 8-16 GB |
-| Storage | 10 GB free | 50 GB free |
-| Python | 3.8+ | 3.10+ |
-| Network | Same LAN as cameras | Gigabit LAN |
+| **CPU** | Intel i3 / Ryzen 3 | Intel i5 / Ryzen 5 |
+| **RAM** | 4 GB | 8 GB |
+| **Storage** | 10 GB free | 50 GB+ SSD |
+| **OS** | Windows 10 / Ubuntu 20.04 | Windows 11 / Ubuntu 22.04 |
+| **Python** | 3.9 | 3.10–3.12 |
+| **Network** | LAN access to cameras | Gigabit LAN |
+| **GPU** | Not required | NVIDIA GPU (optional, for CUDA acceleration) |
 
-### Performance by Platform & Camera Count
+### Performance by Platform
 
-| Platform | Max Cameras | Recommended `frame_skip` |
-|----------|-------------|--------------------------|
-| Raspberry Pi 4 (4GB) | 2-4 | 8-10 |
-| Raspberry Pi 5 (8GB) | 4-6 | 5-7 |
-| Intel i3 / Budget PC | 4-6 | 3-5 |
-| Intel i5 / Mid PC | 8-10 | 3 |
-| Intel i7+ / Server | 12-16 | 2-3 |
-| Mac M1/M2/M3 | 8-12 | 3 |
+| Platform | Max Cameras | FPS per Camera | Notes |
+|----------|-------------|----------------|-------|
+| Windows PC (i5) | 16 | 15–30 | Full features |
+| macOS (M1/M2) | 8–12 | 20–30 | Excellent performance |
+| Linux Server | 16 | 15–30 | Best for headless operation |
+| Raspberry Pi 4 | 2–4 | 5–10 | Set frame_skip=5+ |
+| Raspberry Pi 3 | 1–2 | 3–5 | Basic monitoring only |
 
 ---
+
 
 ## Project Structure
 
 ```
 CCTV/
-├── main.py                    # Entry point (console)
-├── desktop_app.py             # Windows Desktop GUI App
-├── config.yaml                # All settings
-├── requirements.txt           # Dependencies
-├── setup.sh                   # Linux/Mac setup
-├── build_exe.py               # Windows EXE builder
-├── build_exe.bat              # Windows build script
-├── START_APP.bat              # Launch desktop app (Windows)
-├── CCTVSmartMonitor.spec      # PyInstaller spec
-├── README.md                  # This file
-├── USER_MANUAL.md             # Detailed user manual
+├── main.py                    # Main entry point (headless mode)
+├── desktop_app.py             # Windows GUI application
+├── config.yaml                # All configuration (editable)
+├── requirements.txt           # Python dependencies
+├── build_exe.py               # PyInstaller build script
+├── build_exe.bat              # Windows EXE build launcher
+├── setup.sh                   # Linux/Mac setup script
+├── setup_mac.py               # macOS-specific setup
+├── install_windows.bat        # Windows dependency installer
+├── START_APP.bat              # Quick-start for Windows users
+├── cctv-monitor.service       # systemd service file (Linux)
+├── CCTVSmartMonitor.spec      # PyInstaller spec file
 │
-├── core/
-│   ├── database.py            # SQLite storage
-│   ├── night_mode.py          # Low-light enhancement
-│   └── report_generator.py    # Daily summary reports
+├── core/                      # Core modules
+│   ├── database.py            # SQLite database operations
+│   ├── night_mode.py          # Night vision enhancement
+│   └── report_generator.py    # Daily/weekly report builder
 │
-├── cameras/
-│   └── camera_manager.py      # Multi-camera (1-16 ch)
+├── cameras/                   # Camera handling
+│   └── camera_manager.py      # Multi-camera connection & streaming
 │
-├── detectors/
-│   ├── face_detector.py       # Face recognition
-│   ├── plate_detector.py      # Indian ANPR
-│   ├── vehicle_detector.py    # Vehicle + helmet
-│   ├── threat_detector.py     # Loitering + crowd + motion
-│   ├── mask_detector.py       # Masked person detection
-│   └── entry_exit_counter.py  # People counting
+├── detectors/                 # AI detection engines
+│   ├── face_detector.py       # Face recognition (dlib/face_recognition)
+│   ├── plate_detector.py      # Indian ANPR (EasyOCR)
+│   ├── vehicle_detector.py    # Vehicle classification (YOLO)
+│   ├── threat_detector.py     # Loitering & crowd detection
+│   ├── entry_exit_counter.py  # People counting
+│   └── mask_detector.py       # Face mask detection
 │
-├── alerts/
-│   ├── alert_manager.py       # Telegram / WhatsApp / Sound
+├── alerts/                    # Alert system
+│   ├── alert_manager.py       # Alert dispatcher (Telegram/WhatsApp/webhook)
 │   └── telegram_bot.py        # Two-way Telegram bot
 │
-├── web/
-│   ├── app.py                 # Flask dashboard
-│   ├── templates/             # 10 HTML pages
-│   └── static/                # CSS + JS
+├── web/                       # Web dashboard
+│   ├── app.py                 # Flask application (routes & API)
+│   ├── static/
+│   │   ├── css/style.css      # Dashboard styles
+│   │   └── js/main.js         # Frontend JavaScript
+│   └── templates/             # HTML templates
+│       ├── base.html          # Base layout
+│       ├── dashboard.html     # Main dashboard
+│       ├── cameras.html       # Camera management
+│       ├── faces.html         # Face recognition page
+│       ├── plates.html        # Vehicles & plates
+│       ├── visitors.html      # Visitor analytics
+│       ├── events.html        # Event monitoring
+│       ├── reports.html       # Report generation
+│       ├── settings.html      # System settings
+│       └── login.html         # Authentication
 │
-├── known_faces/               # Put face photos here
-├── storage/                   # Database + thumbnails
-├── recordings/                # Event clips
-├── reports/                   # Daily reports
-├── demo_videos/               # Test videos
+├── installer/                 # Windows installer (Inno Setup)
+│   ├── CCTVSmartMonitor.iss   # Inno Setup script
+│   ├── build_installer.bat    # Installer build script
+│   └── README_INSTALLER.md   # Installer documentation
+│
+├── storage/                   # Runtime data (auto-created)
+│   ├── cctv_monitor.db        # SQLite database
+│   ├── faces/                 # Saved face images
+│   ├── plates/                # Saved plate images
+│   └── vehicles/              # Saved vehicle images
+│
+├── known_faces/               # Pre-loaded face images
+├── demo_videos/               # Test videos for demo mode
+├── recordings/                # Video clips
+├── reports/                   # Generated reports
 └── logs/                      # Application logs
 ```
 
 ---
 
+
 ## Troubleshooting
 
 | Problem | Solution |
 |---------|----------|
-| `dlib` fails to install (Windows) | **Install Visual Studio C++ Build Tools first!** Download from https://visualstudio.microsoft.com/visual-cpp-build-tools/ → select "Desktop development with C++" → Install → Restart PC → try `pip install dlib` again |
-| `git` not recognized | Install Git from https://git-scm.com/download/win |
-| `python` not recognized | Reinstall Python, check "Add to PATH" during install |
-| `pip` not recognized | Run `python -m ensurepip --upgrade` |
-| Camera offline | Verify IP, username, password. Test URL in VLC first. |
-| Faces not detected | Ensure good lighting. Min face size: 20px. |
-| Face recognition not matching | Make sure `dlib` and `face-recognition` are installed: `pip install dlib face-recognition` |
-| Plates not reading | Camera at plate height (1-1.5m). Resolution 720p+. |
-| High CPU | Increase `frame_skip` in config.yaml. Disable unneeded detections per camera. |
-| Telegram not sending | Verify bot token & chat_id. Start your bot first. Run `python main.py --test-alerts`. |
-| Port 5000 busy | Use `python main.py --port 8080` |
-| EXE build fails | Make sure PyInstaller is installed: `pip install pyinstaller` |
-| `venv` creation fails | Run `python -m ensurepip` first, then try `python -m venv venv` again |
-| Permission denied | Run Command Prompt as Administrator (right-click → Run as administrator) |
-| Packages download slow | Your internet may be slow. Wait patiently. Try `pip install -r requirements.txt --timeout 120` |
+| **`dlib` fails to install** | Install Visual Studio Build Tools with "Desktop development with C++" workload. Restart PC. Then `pip install dlib`. |
+| **`cmake` not found** | Windows: Install VS Build Tools. Mac: `brew install cmake`. Linux: `sudo apt install cmake`. |
+| **Camera shows "Offline"** | Verify RTSP URL in VLC first. Check IP, port, username, password. Ensure camera is on same network. |
+| **High CPU usage** | Increase `frame_skip` in config.yaml (try 5–10). Disable unused detections per camera. Reduce camera count. |
+| **Telegram alerts not working** | Verify bot_token and chat_id. Send `/start` to your bot first. Check internet connectivity. Click "Test Telegram" in Settings. |
+| **WhatsApp alerts not working** | Verify Twilio credentials. Ensure sandbox is activated. Check "from" number format includes `whatsapp:+`. |
+| **Face recognition too slow** | Reduce camera resolution. Increase `min_face_size`. Enable `frame_skip`. Use fewer cameras. |
+| **Plates not reading correctly** | Ensure camera is at correct angle (15–30°). Check lighting. Increase resolution. Clean camera lens. |
+| **Web dashboard won't load** | Check port 5000 is free: `netstat -an | findstr 5000`. Try different port in config.yaml. |
+| **"Module not found" error** | Ensure virtual environment is activated. Re-run `pip install -r requirements.txt`. |
+| **Database locked error** | Stop all instances. Only one process should access the database at a time. |
+| **Night mode too bright/dark** | Adjust `enhancement_level` (1=light, 2=medium, 3=heavy). Or set `auto_detect: true`. |
+| **Entry/exit count wrong** | Adjust `line_position` (0.0–1.0) to match your camera's entry point. Check `line_direction`. |
+| **Out of disk space** | Reduce `auto_delete` days. Lower `image_quality`. Disable `save_vehicle_images` if not needed. |
+| **App crashes on startup** | Check `logs/` folder for error details. Ensure config.yaml is valid YAML (no tabs, proper indentation). |
+| **Cannot access from phone** | Use `host: "0.0.0.0"` in web config. Access via computer's IP: `http://192.168.1.X:5000`. |
+| **RTSP stream laggy** | Use sub-stream URL (lower resolution). Increase `frame_skip`. Check network bandwidth. |
+| **Permission denied (Linux)** | Run with `sudo` or fix permissions: `chmod -R 755 storage/ logs/ recordings/`. |
 
 ---
+
 
 ## FAQ
 
-**Is this free?**
-Yes. Fully open-source. No subscriptions, no cloud fees.
+**Q: Do I need a GPU?**  
+A: No. The system runs on CPU. A GPU (NVIDIA CUDA) provides optional acceleration but is not required.
 
-**Does it need internet?**
-No. Everything runs locally. Internet only needed for Telegram/WhatsApp alerts.
+**Q: What's the difference between face detection and face recognition?**  
+A: Detection = finding faces in an image. Recognition = identifying WHO that face belongs to by comparing against known faces.
 
-**Why does dlib fail to install on Windows?**
-dlib is a C++ library that needs to be compiled. Windows doesn't come with a C++ compiler by default. Install "Visual Studio C++ Build Tools" (free, ~6GB) — this gives Windows the ability to compile C++ code. After installing, restart your PC and `pip install dlib` will work.
+**Q: How many cameras can I connect?**  
+A: Up to 16 cameras simultaneously. Performance depends on your hardware and `frame_skip` setting.
 
-**What's the difference between face detection and face recognition?**
-- **Detection** = finding faces in an image (works with just OpenCV)
-- **Recognition** = identifying WHO the face belongs to (needs dlib/face_recognition)
-Both are included in this system. dlib is required for the full experience.
+**Q: Can I access the dashboard from my phone?**  
+A: Yes. Set `host: "0.0.0.0"` in config, then open `http://<your-computer-ip>:5000` from any device on the same network.
 
-**How many cameras can it handle?**
-1 to 16 channels. Depends on hardware — a decent i5 handles 8 comfortably.
+**Q: Does night mode work automatically?**  
+A: Yes. Set `auto_detect: true` or configure schedule (e.g., 18:00–06:00). The system enhances dark frames automatically.
 
-**Can I use my phone as a camera?**
-Yes. Use "IP Webcam" app (Android) or "EpocCam" (iPhone).
+**Q: How much disk space does it use?**  
+A: Depends on cameras and retention. Typical: 100–500 MB/day with 4 cameras. Auto-delete keeps it in check.
 
-**Can I access from my phone?**
-Yes. Open `http://YOUR_COMPUTER_IP:5000` from any browser on your network.
+**Q: Can I run this on a Raspberry Pi?**  
+A: Yes. Raspberry Pi 4 (4GB+) works well with 1–2 cameras. Use `frame_skip: 5` and disable heavy detections.
 
-**Does it work at night?**
-Yes. Night mode auto-enhances dark footage. IR cameras recommended.
+**Q: Is my data sent to the cloud?**  
+A: No. Everything runs locally on your machine. Alerts only go to YOUR Telegram/WhatsApp. No cloud dependency.
 
-**Can I give this to someone who doesn't know computers?**
-Yes. Build the EXE (`build_exe.bat`), share the folder. They just double-click `START.bat`.
+**Q: How do I add Indian number plates?**  
+A: It works automatically. The ANPR module is pre-configured for all Indian state codes and plate formats.
 
-**What camera should I buy?**
-Any IP camera with RTSP. Hikvision, CP Plus, Dahua are popular in India. Budget: Rs 2000-5000.
+**Q: Can I use WiFi cameras?**  
+A: Yes. Any camera that outputs an RTSP, HTTP, or MJPEG stream works. WiFi or wired doesn't matter.
 
-**What Python version should I use?**
-Python 3.10 or 3.11 recommended. Python 3.12+ works but some packages may take longer to install. Python 3.14 (cutting edge) may have compatibility issues with some packages.
+**Q: How do I reset the admin password?**  
+A: Edit `config.yaml` → `web.auth.password` → save → restart the application.
 
-**I get "Read timed out" errors during pip install?**
-Your internet is slow. Try: `pip install -r requirements.txt --timeout 300`
+**Q: Can I run multiple instances?**  
+A: Not recommended with the same database. Use different config files and ports for multiple instances.
 
-**How much disk space does it need?**
-- Project files: ~10 MB
-- Python packages (venv): ~3-5 GB (includes PyTorch, YOLO models)
-- Visual Studio Build Tools: ~6 GB
-- Runtime data: few MBs (faces, plates, events)
+**Q: Does it work without internet?**  
+A: Yes. Core monitoring works offline. Only Telegram/WhatsApp alerts require internet connectivity.
+
+**Q: How do I update to a newer version?**  
+A: `git pull origin main` and `pip install -r requirements.txt`. Your config.yaml and data are preserved.
+
+**Q: Can I integrate with my existing NVR?**  
+A: Yes. If your NVR provides RTSP output per channel, add those URLs as cameras in config.
 
 ---
+
 
 ## Command Line Reference
 
 ```bash
-python main.py                 # Start with config.yaml
-python main.py --demo          # Demo mode (no cameras)
-python main.py --port 8080     # Custom web port
-python main.py --no-web        # Disable web dashboard
-python main.py --test-alerts   # Test Telegram/WhatsApp
-python main.py --config path   # Custom config file
-python main.py --help          # Show all options
+python main.py [OPTIONS]
+```
+
+| Option | Description |
+|--------|-------------|
+| `--demo` | Run in demo mode (no real cameras needed) |
+| `--config FILE` | Use custom config file (default: config.yaml) |
+| `--port PORT` | Override web dashboard port |
+| `--no-web` | Disable web dashboard |
+| `--test-alerts` | Send test alerts and exit |
+| `--help` | Show help message |
+
+### Examples
+
+```bash
+# Start with default config
+python main.py
+
+# Demo mode for testing
+python main.py --demo
+
+# Custom config and port
+python main.py --config production.yaml --port 8080
+
+# Headless without web dashboard
+python main.py --no-web
+
+# Test Telegram/WhatsApp connectivity
+python main.py --test-alerts
+
+# Desktop GUI (Windows)
+python desktop_app.py
 ```
 
 ---
 
-## Web Dashboard Templates
 
-The web dashboard uses a professional enterprise-grade UI with Jinja2/Flask templating. All templates extend `base.html` and use a consistent design system.
+## Customization Guide
 
-### Template Architecture
+This system is designed to be easily customizable without touching source code.
 
-| Template | Features |
-|----------|----------|
-| `dashboard.html` | 6 stat cards, camera status table, recent alerts feed, entry/exit tracker, quick actions panel, auto-refresh every 5s |
-| `faces.html` | Face grid with categories, "NEW" badges, rename modal, blacklist/whitelist, category filters, search, stats summary |
-| `plates.html` | Vehicle detection cards with plate captions, helmet status badges, plate registry table with confidence %, blacklist management, vehicle type filters |
-| `settings.html` | 5-section config panel: camera management (up to 16), alert configuration (Telegram + WhatsApp), auto-delete settings, global detection toggles, system info |
+### Quick Customization (No Code)
 
-### Customizing the UI
+| What to Change | Where |
+|----------------|-------|
+| Add/remove cameras | Web Dashboard → Settings, or `config.yaml` → `cameras` |
+| Enable/disable detections | Web Dashboard → Settings toggle, or per-camera config |
+| Alert credentials | Web Dashboard → Settings → Telegram/WhatsApp |
+| Retention/auto-delete | Web Dashboard → Settings → Auto-Delete |
+| Login credentials | `config.yaml` → `web.auth` |
+| Dashboard port | `config.yaml` → `web.port` |
+| Night mode schedule | `config.yaml` → `night_mode.schedule` |
+| Detection sensitivity | `config.yaml` → respective detector section |
 
-- **Colors:** Edit CSS variables in `web/static/css/style.css` (`:root` section)
-- **Layout:** All pages use the `.stats-grid`, `.card`, `.table`, `.faces-grid` CSS classes
-- **Icons:** Font Awesome 6.4 is loaded via CDN in `base.html`
-- **JavaScript:** Each page has self-contained JS in `{% block scripts %}` — no external frameworks needed
-- **Responsive:** All pages adapt to mobile with sidebar collapse and grid reflow
+### Code-Level Customization
 
-### Design System Classes
+| Customization | File |
+|---------------|------|
+| Dashboard theme/styles | `web/static/css/style.css` |
+| Dashboard behavior | `web/static/js/main.js` |
+| Page layouts | `web/templates/*.html` |
+| Desktop app colors | `desktop_app.py` → `COLOR PALETTE` section |
+| API rate limits | `web/app.py` → `APP_CONFIG` dict |
+| Video stream quality | `web/app.py` → `APP_CONFIG["VIDEO_JPEG_QUALITY"]` |
+| Add new detection types | Create new file in `detectors/` |
+| Add new alert channels | Extend `alerts/alert_manager.py` |
+| Add new bot commands | Extend `alerts/telegram_bot.py` |
+| Custom report templates | Modify `core/report_generator.py` |
 
-| Class | Purpose |
-|-------|---------|
-| `.stat-card` | Stats overview cards with icon + number |
-| `.card` / `.card-header` / `.card-body` | Content sections |
-| `.badge-success/danger/info/resident/visitor` | Status indicators |
-| `.faces-grid` | Auto-fit grid for face/vehicle cards |
-| `.filter-bar` | Horizontal filter button row |
-| `.search-bar` | Search input with button |
-| `.modal` / `.modal-content` | Dialog overlays |
-| `.switch` / `.slider` | Toggle switches |
-| `.toggle-item` | Checkbox with label in pill shape |
+### Feature Flags (config.yaml)
+
+```yaml
+# Enable/disable entire features
+vehicle_detection:
+  helmet_detection: true/false
+
+mask_detection:
+  enabled: true/false
+
+night_mode:
+  enabled: true/false
+
+entry_exit:
+  enabled: true/false
+
+threat_detection:
+  loitering:
+    enabled: true/false
+  crowd:
+    enabled: true/false
+```
 
 ---
 
-## Contributing
 
-Contributions welcome! Feel free to open issues or submit pull requests.
+## Contributing & License
+
+### Contributing
+
+1. Fork the repository
+2. Create your feature branch: `git checkout -b feature/amazing-feature`
+3. Commit your changes: `git commit -m "Add amazing feature"`
+4. Push to the branch: `git push origin feature/amazing-feature`
+5. Open a Pull Request
+
+### Code Style
+
+- Python 3.9+ with type hints where appropriate
+- Follow PEP 8 conventions
+- Docstrings for all public methods
+- Keep modules self-contained and loosely coupled
+
+### Reporting Issues
+
+- Use GitHub Issues
+- Include: OS, Python version, error traceback, steps to reproduce
+- For camera issues: include brand/model and RTSP URL format (redact credentials)
+
+### License
+
+This project is licensed under the MIT License.
 
 ---
 
-## License
-
-This project is open-source. Use it freely for personal and commercial purposes.
+**Made for India** | Supports all Indian number plate formats, popular camera brands (Hikvision, Dahua, CP Plus, Godrej), and local use cases including helmet detection, auto-rickshaw classification, and delivery tracking.
