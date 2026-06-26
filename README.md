@@ -93,7 +93,7 @@ Alternative: Download this project as ZIP from GitHub → Extract.
 **Step 4: Clone & Install**
 
 ```bash
-git clone https://github.com/yourusername/CCTV.git
+git clone https://github.com/akshargangoli/CCTV.git
 cd CCTV
 python -m venv venv
 venv\Scripts\activate
@@ -122,7 +122,7 @@ Login: `admin` / `admin123`
 
 ```bash
 brew install python cmake
-git clone https://github.com/yourusername/CCTV.git
+git clone https://github.com/akshargangoli/CCTV.git
 cd CCTV
 python3 -m venv venv
 source venv/bin/activate
@@ -135,7 +135,7 @@ python3 main.py --demo
 ```bash
 sudo apt update
 sudo apt install python3 python3-venv python3-pip cmake build-essential libopencv-dev
-git clone https://github.com/yourusername/CCTV.git
+git clone https://github.com/akshargangoli/CCTV.git
 cd CCTV
 python3 -m venv venv
 source venv/bin/activate
@@ -148,7 +148,7 @@ python3 main.py --demo
 ```bash
 sudo apt update
 sudo apt install python3 python3-venv python3-pip cmake libatlas-base-dev libhdf5-dev
-git clone https://github.com/yourusername/CCTV.git
+git clone https://github.com/akshargangoli/CCTV.git
 cd CCTV
 python3 -m venv venv
 source venv/bin/activate
