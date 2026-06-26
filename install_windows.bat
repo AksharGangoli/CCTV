@@ -3,6 +3,14 @@ echo ==========================================
 echo   CCTV Smart Monitor - Windows Installer
 echo ==========================================
 echo.
+echo PREREQUISITE: Visual Studio C++ Build Tools must be installed!
+echo If not installed, download from:
+echo https://visualstudio.microsoft.com/visual-cpp-build-tools/
+echo Select "Desktop development with C++" and install.
+echo.
+echo Press any key to continue (or Ctrl+C to cancel)...
+pause >nul
+echo.
 
 REM Check Python
 python --version >nul 2>&1
@@ -16,49 +24,41 @@ if errorlevel 1 (
     exit /b 1
 )
 
-echo [1/5] Creating virtual environment...
+echo [1/4] Creating virtual environment...
 python -m venv venv
 if errorlevel 1 (
-    echo [ERROR] Failed to create venv. Try: python -m ensurepip
+    echo [ERROR] Failed to create venv.
     pause
     exit /b 1
 )
 
-echo [2/5] Activating virtual environment...
+echo [2/4] Activating virtual environment...
 call venv\Scripts\activate
 
-echo [3/5] Installing core packages...
-pip install --upgrade pip --quiet
+echo [3/4] Upgrading pip...
+pip install --upgrade pip
+
+echo [4/4] Installing all packages (this takes 5-10 minutes)...
+echo.
 pip install -r requirements.txt
 if errorlevel 1 (
     echo.
-    echo [WARNING] Some packages may have failed.
-    echo          This is usually fine - the app will still work!
+    echo ==========================================
+    echo [ERROR] Installation failed!
+    echo ==========================================
     echo.
-)
-
-echo [4/5] Installing optional packages (may skip some)...
-pip install python-telegram-bot --quiet 2>nul
-pip install twilio --quiet 2>nul
-pip install matplotlib --quiet 2>nul
-
-echo.
-echo [5/5] Attempting face_recognition install...
-echo       (This may fail without Visual Studio - that's OK!)
-pip install dlib face-recognition --quiet 2>nul
-if errorlevel 1 (
+    echo Most likely cause: Visual Studio C++ Build Tools not installed.
     echo.
-    echo [INFO] dlib/face_recognition could not be installed.
-    echo        Face DETECTION still works (via OpenCV).
-    echo        Face RECOGNITION (name matching) needs Visual Studio C++ Build Tools.
+    echo FIX:
+    echo 1. Go to: https://visualstudio.microsoft.com/visual-cpp-build-tools/
+    echo 2. Download and run "Build Tools for Visual Studio 2022"
+    echo 3. Select "Desktop development with C++" checkbox
+    echo 4. Click Install (needs ~6GB, takes 5-10 min)
+    echo 5. RESTART your computer
+    echo 6. Run this installer again
     echo.
-    echo        To fix later: 
-    echo        1. Download: https://visualstudio.microsoft.com/visual-cpp-build-tools/
-    echo        2. Install "Desktop development with C++"
-    echo        3. Run: pip install dlib face-recognition
-    echo.
-) else (
-    echo [OK] face_recognition installed successfully!
+    pause
+    exit /b 1
 )
 
 echo.
@@ -67,10 +67,10 @@ echo   INSTALLATION COMPLETE!
 echo ==========================================
 echo.
 echo   To start the Desktop App:
-echo     python desktop_app.py
-echo     (or double-click START_APP.bat)
+echo     double-click START_APP.bat
 echo.
 echo   To start Console Mode:
+echo     venv\Scripts\activate
 echo     python main.py --demo
 echo.
 echo   Web Dashboard:

@@ -51,26 +51,181 @@ An open-source, self-hosted CCTV monitoring system that turns ordinary cameras i
 
 ## Quick Start
 
+### Windows (Full Step-by-Step)
+
+**You need to install 3 things in this exact order:**
+
+#### Step 1: Install Python
+
+1. Go to **https://www.python.org/downloads/**
+2. Click **"Download Python 3.12.x"** (or latest)
+3. Run the installer
+4. **IMPORTANT:** Check ✅ **"Add Python to PATH"** at the bottom of installer
+5. Click **"Install Now"**
+6. Wait for install to finish
+7. Verify: Open Command Prompt (`Win + R` → type `cmd` → Enter) and type:
+   ```
+   python --version
+   ```
+   You should see something like `Python 3.12.x`
+
+#### Step 2: Install Visual Studio C++ Build Tools
+
+This is **required** for face recognition (dlib library).
+
+1. Go to **https://visualstudio.microsoft.com/visual-cpp-build-tools/**
+2. Click **"Download Build Tools"**
+3. Run the downloaded file (`vs_BuildTools.exe`)
+4. In the installer window, check ✅ **"Desktop development with C++"**
+5. Click **"Install"** (bottom right)
+6. Wait for installation (~6 GB download, takes 5-10 minutes)
+7. **Restart your computer** after installation
+
+#### Step 3: Install Git (for downloading the project)
+
+1. Go to **https://git-scm.com/download/win**
+2. Download and run the installer
+3. Click "Next" through all options (defaults are fine)
+4. After install, open a **new** Command Prompt and verify:
+   ```
+   git --version
+   ```
+
+#### Step 4: Download & Install CCTV Smart Monitor
+
+Open Command Prompt and run these commands **one by one**:
+
 ```bash
-# Clone
+# Download the project
+git clone https://github.com/akshargangoli/CCTV.git
+
+# Go into the folder
+cd CCTV
+
+# Create virtual environment
+python -m venv venv
+
+# Activate it
+venv\Scripts\activate
+
+# Install all packages (takes 5-10 minutes)
+pip install -r requirements.txt
+```
+
+**If you get any errors during pip install:**
+- Make sure Visual Studio Build Tools is installed (Step 2)
+- Make sure you restarted your computer after installing it
+- Try running Command Prompt as **Administrator** (right-click → Run as administrator)
+
+#### Step 5: Run the Application
+
+```bash
+# Make sure venv is activated
+venv\Scripts\activate
+
+# Option A: Desktop App (GUI window)
+python desktop_app.py
+
+# Option B: Console Mode
+python main.py --demo
+
+# Option C: Double-click START_APP.bat
+```
+
+#### Step 6: Open Dashboard
+
+1. Open your browser
+2. Go to: **http://localhost:5000**
+3. Login: **admin** / **admin123**
+
+---
+
+### Without Git (Alternative Download)
+
+If you don't want to install Git:
+
+1. Go to **https://github.com/akshargangoli/CCTV**
+2. Click the green **"Code"** button
+3. Click **"Download ZIP"**
+4. Extract the ZIP to a folder (e.g., `C:\Users\YourName\CCTV`)
+5. Open Command Prompt, navigate to that folder:
+   ```
+   cd C:\Users\YourName\CCTV
+   ```
+6. Continue from Step 4 above (create venv, install, run)
+
+---
+
+### macOS
+
+```bash
+# Install Homebrew
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+# Install Python, cmake, git
+brew install python cmake git
+
+# Download project
 git clone https://github.com/akshargangoli/CCTV.git
 cd CCTV
 
-# Install (Linux/Mac)
-bash setup.sh
+# Create virtual environment
+python3 -m venv venv
+source venv/bin/activate
 
-# Or install manually (Windows/Linux/Mac)
-python -m venv venv
-source venv/bin/activate   # Linux/Mac
-# venv\Scripts\activate    # Windows
+# Install all packages
 pip install -r requirements.txt
 
-# Run in demo mode (no cameras needed)
-python main.py --demo
+# Run
+python3 desktop_app.py
+```
 
-# Open dashboard
-# http://localhost:5000
-# Login: admin / admin123
+### Linux (Ubuntu/Debian)
+
+```bash
+# Install system dependencies
+sudo apt update
+sudo apt install -y python3 python3-pip python3-venv python3-tk
+sudo apt install -y cmake build-essential libopenblas-dev liblapack-dev
+sudo apt install -y libgtk-3-dev libx11-dev git
+
+# Download project
+git clone https://github.com/akshargangoli/CCTV.git
+cd CCTV
+
+# Run setup script (does everything)
+bash setup.sh
+
+# Activate and run
+source venv/bin/activate
+python3 desktop_app.py
+```
+
+### Raspberry Pi
+
+```bash
+# Update system
+sudo apt update && sudo apt upgrade -y
+
+# Install dependencies
+sudo apt install -y python3 python3-pip python3-venv python3-tk
+sudo apt install -y cmake build-essential libatlas-base-dev
+sudo apt install -y libhdf5-dev libharfbuzz-dev libopenjp2-7
+sudo apt install -y libgtk-3-dev libilmbase-dev libopenexr-dev git
+
+# Download project
+git clone https://github.com/akshargangoli/CCTV.git
+cd CCTV
+
+# Setup
+bash setup.sh
+source venv/bin/activate
+
+# Run (console mode recommended for Pi)
+python3 main.py
+
+# Or with GUI (if monitor connected)
+python3 desktop_app.py
 ```
 
 ---
@@ -733,13 +888,21 @@ CCTV/
 
 | Problem | Solution |
 |---------|----------|
+| `dlib` fails to install (Windows) | **Install Visual Studio C++ Build Tools first!** Download from https://visualstudio.microsoft.com/visual-cpp-build-tools/ → select "Desktop development with C++" → Install → Restart PC → try `pip install dlib` again |
+| `git` not recognized | Install Git from https://git-scm.com/download/win |
+| `python` not recognized | Reinstall Python, check "Add to PATH" during install |
+| `pip` not recognized | Run `python -m ensurepip --upgrade` |
 | Camera offline | Verify IP, username, password. Test URL in VLC first. |
-| Faces not detected | Ensure good lighting. Min face size: 20px. Install `face_recognition`. |
-| Plates not reading | Camera at plate height (1-1.5m). Resolution 720p+. Install `easyocr`. |
-| High CPU | Increase `frame_skip`. Disable unneeded detections per camera. |
-| Telegram not sending | Verify bot token & chat_id. Start your bot first. Run `--test-alerts`. |
+| Faces not detected | Ensure good lighting. Min face size: 20px. |
+| Face recognition not matching | Make sure `dlib` and `face-recognition` are installed: `pip install dlib face-recognition` |
+| Plates not reading | Camera at plate height (1-1.5m). Resolution 720p+. |
+| High CPU | Increase `frame_skip` in config.yaml. Disable unneeded detections per camera. |
+| Telegram not sending | Verify bot token & chat_id. Start your bot first. Run `python main.py --test-alerts`. |
 | Port 5000 busy | Use `python main.py --port 8080` |
-| EXE build fails | Update PyInstaller: `pip install --upgrade pyinstaller` |
+| EXE build fails | Make sure PyInstaller is installed: `pip install pyinstaller` |
+| `venv` creation fails | Run `python -m ensurepip` first, then try `python -m venv venv` again |
+| Permission denied | Run Command Prompt as Administrator (right-click → Run as administrator) |
+| Packages download slow | Your internet may be slow. Wait patiently. Try `pip install -r requirements.txt --timeout 120` |
 
 ---
 
@@ -750,6 +913,14 @@ Yes. Fully open-source. No subscriptions, no cloud fees.
 
 **Does it need internet?**
 No. Everything runs locally. Internet only needed for Telegram/WhatsApp alerts.
+
+**Why does dlib fail to install on Windows?**
+dlib is a C++ library that needs to be compiled. Windows doesn't come with a C++ compiler by default. Install "Visual Studio C++ Build Tools" (free, ~6GB) — this gives Windows the ability to compile C++ code. After installing, restart your PC and `pip install dlib` will work.
+
+**What's the difference between face detection and face recognition?**
+- **Detection** = finding faces in an image (works with just OpenCV)
+- **Recognition** = identifying WHO the face belongs to (needs dlib/face_recognition)
+Both are included in this system. dlib is required for the full experience.
 
 **How many cameras can it handle?**
 1 to 16 channels. Depends on hardware — a decent i5 handles 8 comfortably.
@@ -768,6 +939,18 @@ Yes. Build the EXE (`build_exe.bat`), share the folder. They just double-click `
 
 **What camera should I buy?**
 Any IP camera with RTSP. Hikvision, CP Plus, Dahua are popular in India. Budget: Rs 2000-5000.
+
+**What Python version should I use?**
+Python 3.10 or 3.11 recommended. Python 3.12+ works but some packages may take longer to install. Python 3.14 (cutting edge) may have compatibility issues with some packages.
+
+**I get "Read timed out" errors during pip install?**
+Your internet is slow. Try: `pip install -r requirements.txt --timeout 300`
+
+**How much disk space does it need?**
+- Project files: ~10 MB
+- Python packages (venv): ~3-5 GB (includes PyTorch, YOLO models)
+- Visual Studio Build Tools: ~6 GB
+- Runtime data: few MBs (faces, plates, events)
 
 ---
 

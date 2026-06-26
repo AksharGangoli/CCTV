@@ -1,16 +1,23 @@
 # ============================================================
 # CCTV SMART MONITOR - REQUIRED PACKAGES
 # ============================================================
-# Run: pip install -r requirements.txt
+# 
+# IMPORTANT (Windows Users):
+# Before running "pip install -r requirements.txt", you MUST
+# install Visual Studio C++ Build Tools first!
+# See README.md for step-by-step instructions.
 #
-# NOTE: dlib/face_recognition is OPTIONAL (see below)
-# Everything else works without it!
+# Run: pip install -r requirements.txt
 # ============================================================
 
-# Core (REQUIRED - always install)
+# Core
 opencv-python>=4.8.0
 numpy>=1.24.0
 Pillow>=10.0.0
+
+# Face Recognition (requires Visual Studio C++ Build Tools on Windows)
+dlib>=19.24.0
+face-recognition>=1.3.0
 
 # Number Plate & Text Recognition
 easyocr>=1.7.0
@@ -25,6 +32,8 @@ flask-socketio>=5.3.0
 flask-login>=0.6.0
 
 # Alerts
+python-telegram-bot>=20.0
+twilio>=8.0.0
 requests>=2.31.0
 
 # Image Processing & Night Mode
@@ -33,6 +42,7 @@ scikit-image>=0.21.0
 # Scheduling & Reports
 schedule>=1.2.0
 fpdf2>=2.7.0
+matplotlib>=3.7.0
 
 # Configuration
 pyyaml>=6.0.0
@@ -44,22 +54,3 @@ customtkinter>=5.2.0
 python-dateutil>=2.8.0
 colorama>=0.4.6
 tqdm>=4.65.0
-
-# ============================================================
-# OPTIONAL PACKAGES (install separately if needed)
-# ============================================================
-# These require extra setup on Windows.
-# The system works WITHOUT them (uses OpenCV fallback).
-#
-# --- Face Recognition (needs Visual Studio C++ Build Tools) ---
-# pip install dlib face-recognition
-#
-# --- Telegram Bot ---
-# pip install python-telegram-bot
-#
-# --- WhatsApp via Twilio ---
-# pip install twilio
-#
-# --- Matplotlib (for charts in reports) ---
-# pip install matplotlib
-# ============================================================
