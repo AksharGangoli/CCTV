@@ -13,29 +13,39 @@ A production-ready, enterprise-grade CCTV monitoring platform built for India. C
 | Multi-Camera Support | 1–16 cameras (RTSP, USB, HTTP stream, video file) |
 | Face Recognition | Auto-save unknown faces, one-click rename, blacklist/whitelist |
 | Indian ANPR | Number plate reader supporting all 36 states & UTs |
-| Vehicle Classification | Car, bike, bus, truck, auto-rickshaw, bicycle |
+| Vehicle Classification | Car, bike, bus, truck, auto-rickshaw, bicycle + photo capture |
 | Helmet Detection | Toggle on/off per camera, alerts on violation |
-| Mask Detection | Photo alert to Telegram + WhatsApp on no-mask |
+| Mask Detection | Photo alert to Telegram + WhatsApp on masked person |
 | Loitering Detection | Configurable time & area thresholds |
 | Entry/Exit Counting | Real-time visitor log with daily reset |
 | Night Mode | Auto-detect or scheduled image enhancement |
-| Telegram Bot (2-Way) | /status /summary /cameras /count /alerts /faces /plates /report /help |
+| Telegram Bot (2-Way) | /status /summary /cameras /count /alerts /faces /plates /report /snapshot /help |
 | WhatsApp Alerts | Via Twilio — instant photo + text alerts |
 | Daily Summary | Automated end-of-day report to phone |
-| Desktop App | Modern dark-theme GUI (CustomTkinter) |
-| Web Dashboard | Professional 8-page responsive interface |
+| Desktop App | Modern dark-theme GUI (CustomTkinter) v1.2.0 |
+| Web Dashboard | Professional 8-page responsive interface with storage gauge |
 | Windows EXE Builder | One-click PyInstaller build |
 | Windows Installer | Inno Setup — Next → Next → Install |
 | Cross-Platform | Windows, macOS, Linux, Raspberry Pi |
 | Per-Category Auto-Delete | Customizable retention per data type |
 | Web-Based Config | Alerts, cameras, toggles, auto-delete — all from browser |
-| Space-Efficient Storage | Compressed images, configurable quality |
+| Space-Efficient Storage | Compressed images, configurable quality, storage gauge |
 | Crowd Detection | Alerts when people count exceeds threshold |
 | Webhook Support | POST alerts to any external endpoint |
 | REST API | Full programmatic access to all data |
 | Visitor Analytics | Repeat visitor tracking, categorization |
 | Report Generation | On-demand or scheduled daily reports |
-| Hot-Reload Config | Change settings without restart |
+| Hot-Reload Config | Change settings without restart (5s auto-detect) |
+| **Parallel Processing** | **ThreadPoolExecutor — each camera in its own thread** |
+| **Motion Pre-Filter** | **Skips heavy AI on quiet cameras (80-90% CPU savings)** |
+| **Camera Watchdog** | **Auto-reconnects dropped cameras (exponential backoff)** |
+| **Event Clip Recording** | **Saves pre+post event video clips to recordings/** |
+| **Adaptive Frame Skip** | **Auto-tunes based on CPU load (psutil)** |
+| **Storage Gauge** | **Live MB used + progress bar on dashboard** |
+| **/snapshot Command** | **Telegram bot sends live camera photos on demand** |
+| **Per-Camera Cooldown** | **Multi-camera setups don't miss alerts for same person** |
+| **SQLite WAL Mode** | **Concurrent reads+writes without database locking** |
+| **--quiet Mode** | **Silent 24/7 operation with file logging** |
 
 
 ---
@@ -444,11 +454,12 @@ Send these commands to your bot from Telegram:
 | `/start` | Welcome message with system info |
 | `/status` | System status — cameras online/offline, uptime |
 | `/summary` | Today's quick summary — faces, plates, events |
-| `/cameras` | List all cameras with connection status |
+| `/cameras` | List all cameras with connection status + last-seen time |
 | `/count` | Entry/exit count for today |
 | `/alerts` | Last 5 alert events |
 | `/faces` | Face detection statistics |
 | `/plates` | Last 5 detected number plates |
+| `/snapshot` | **Send live photo from each camera** |
 | `/report` | Generate and send daily report instantly |
 | `/help` | Show all available commands |
 
@@ -623,7 +634,8 @@ All endpoints require authentication (session cookie). Prefix: `http://localhost
 | GET | `/api/events` | Recent events (query: `?limit=20`) |
 | GET | `/api/cameras` | All camera statuses |
 | GET | `/api/entry_exit` | Today's entry/exit count |
-| GET | `/api/health` | System health check (public) |
+| GET | `/api/health` | System health check (public, no auth) — cameras, uptime, storage |
+| GET | `/api/storage_usage` | Storage usage in MB with limit and percentage |
 
 ### Face Management
 
@@ -1005,10 +1017,12 @@ python main.py [OPTIONS]
 | Option | Description |
 |--------|-------------|
 | `--demo` | Run in demo mode (no real cameras needed) |
+| `--quiet`, `-q` | Quiet mode — only errors to console, all logs to file |
+| `--verbose`, `-v` | Verbose mode — full debug output |
 | `--config FILE` | Use custom config file (default: config.yaml) |
 | `--port PORT` | Override web dashboard port |
 | `--no-web` | Disable web dashboard |
-| `--test-alerts` | Send test alerts and exit |
+| `--test-alerts` | Send test alerts and exit (lightweight, no camera init) |
 | `--help` | Show help message |
 
 ### Examples
@@ -1090,6 +1104,71 @@ threat_detection:
   crowd:
     enabled: true/false
 ```
+
+---
+
+
+## Performance & Architecture (v1.2.0)
+
+### Threading Model
+
+```
+Main Thread
+├── ThreadPoolExecutor (1 worker per camera, up to cpu_count)
+│   ├── Camera 1 → face + plate + vehicle + threat detection
+│   ├── Camera 2 → face + plate + vehicle + threat detection
+│   ├── Camera 3 → ...
+│   └── Camera N → ...
+├── Camera Watchdog Thread (reconnects dropped cameras)
+├── Config Watcher Thread (hot-reload on file change)
+├── Report Scheduler Thread (daily at 23:59)
+├── Cleanup Scheduler Thread (daily at 3:00 AM)
+├── Alert Queue Thread (sends Telegram/WhatsApp)
+├── Telegram Bot Thread (listens for commands)
+├── Flask Web Dashboard Thread
+└── Clip Save Threads (spawned on-demand for events)
+```
+
+### Key Optimizations
+
+| Optimization | Impact |
+|-------------|--------|
+| Parallel camera processing | ~Nx throughput for N cameras |
+| Motion pre-filter | 80-90% CPU savings on idle cameras |
+| Adaptive frame_skip | Auto-throttles under CPU pressure |
+| SQLite WAL mode | No more "database locked" errors |
+| Per-camera config cache | O(1) lookup vs O(N) list search |
+| Non-blocking clip save | Doesn't tie up processing threads |
+| Exponential reconnect backoff | Infinite retry, max 60s delay |
+| queue.Queue for alerts | Thread-safe, no busy-polling |
+
+### Event Clip Recording
+
+When a high/critical threat is detected:
+1. **Pre-event frames** captured from ring buffer (last ~50 frames)
+2. **Post-event frames** captured live for 5 seconds after trigger
+3. Combined into AVI file in `recordings/` folder
+4. Captures the full context — what led to the event + what happened after
+
+### Health Monitoring
+
+```
+GET /api/health
+```
+```json
+{
+  "status": "healthy",
+  "version": "1.2.0",
+  "uptime_seconds": 3600,
+  "cameras_online": 4,
+  "cameras_total": 4,
+  "storage_used_mb": 245.3,
+  "storage_limit_mb": 5000,
+  "database": "up"
+}
+```
+
+Use with external monitoring tools (Nagios, uptimerobot, cron scripts).
 
 ---
 
