@@ -28,6 +28,7 @@ Setting up WhatsApp (via Twilio):
 import os
 import cv2
 import time
+import queue
 import requests
 import threading
 import numpy as np
@@ -79,8 +80,8 @@ class AlertManager:
         self._last_alert_time = {}  # {channel: timestamp}
         self._min_interval = 10  # Minimum seconds between alerts per channel
         
-        # Alert queue for async sending
-        self._alert_queue = []
+        # Alert queue (thread-safe)
+        self._alert_queue = queue.Queue()
         self._send_thread = None
         self._running = False
         
@@ -147,8 +148,8 @@ class AlertManager:
             f"{message}"
         )
         
-        # Add to queue
-        self._alert_queue.append({
+        # Add to queue (thread-safe)
+        self._alert_queue.put({
             'type': alert_type,
             'message': formatted_message,
             'severity': severity,
@@ -163,29 +164,34 @@ class AlertManager:
     def _process_queue(self):
         """Process alert queue in background thread."""
         while self._running:
-            if self._alert_queue:
-                alert = self._alert_queue.pop(0)
+            try:
+                alert = self._alert_queue.get(timeout=1)
                 self._send_all_channels(alert)
-            time.sleep(1)
+            except queue.Empty:
+                pass
 
     def _send_all_channels(self, alert: Dict):
         """Send alert through all enabled channels."""
         message = alert['message']
         image = alert.get('image')
+        severity = alert.get('severity', 'low')
+        
+        # High/critical alerts always go through (bypass rate limit)
+        force = severity in ('high', 'critical')
         
         # Telegram
         if self.telegram_enabled:
-            if not self._is_rate_limited('telegram'):
+            if force or not self._is_rate_limited('telegram'):
                 self._send_telegram(message, image)
         
         # WhatsApp
         if self.whatsapp_enabled:
-            if not self._is_rate_limited('whatsapp'):
+            if force or not self._is_rate_limited('whatsapp'):
                 self._send_whatsapp(message)
         
         # Webhook
         if self.webhook_enabled:
-            if not self._is_rate_limited('webhook'):
+            if force or not self._is_rate_limited('webhook'):
                 self._send_webhook(alert)
 
 

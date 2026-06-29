@@ -79,7 +79,7 @@ class CCTVDesktopApp:
 
         # Create main window
         self.root = ctk.CTk()
-        self.root.title("CCTV Smart Monitor")
+        self.root.title("CCTV Smart Monitor v1.2.0")
         self.root.geometry("1400x800")
         self.root.minsize(1200, 700)
         self.root.protocol("WM_DELETE_WINDOW", self._on_close)
