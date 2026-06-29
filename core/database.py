@@ -340,7 +340,8 @@ class Database:
 
     def add_vehicle(self, vehicle_type: str, camera_name: str,
                     plate_id: int = None, color: str = "unknown",
-                    helmet_detected: int = -1, direction: str = "") -> int:
+                    helmet_detected: int = -1, direction: str = "",
+                    image_path: str = "") -> int:
         """Save a vehicle detection."""
         if self._closed:
             return 0

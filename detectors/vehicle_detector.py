@@ -58,6 +58,11 @@ class VehicleDetector:
         self.enabled = config.get('enabled', True)
         self.helmet_detection = config.get('helmet_detection', True)
         self.detect_types = config.get('types', list(self.INDIAN_VEHICLES.keys()))
+        self.save_vehicle_images = config.get('save_vehicle_images', True)
+        
+        # Storage for vehicle images
+        self.vehicles_dir = "storage/vehicles"
+        os.makedirs(self.vehicles_dir, exist_ok=True)
         
         # YOLO model
         self.model = None
@@ -154,6 +159,11 @@ class VehicleDetector:
                 if vehicle_type == 'motorcycle' and self.helmet_detection:
                     helmet_status = self._check_helmet(frame, (x, y, w, h))
                 
+                # Save vehicle image crop
+                vehicle_image_path = ""
+                if self.save_vehicle_images:
+                    vehicle_image_path = self._save_vehicle_image(frame, (x, y, w, h), vehicle_type)
+                
                 # Save to database
                 helmet_int = -1
                 if helmet_status is not None:
@@ -173,7 +183,8 @@ class VehicleDetector:
                     'location': (x, y, w, h),
                     'confidence': confidence,
                     'helmet': helmet_status,
-                    'vehicle_id': vehicle_id
+                    'vehicle_id': vehicle_id,
+                    'image_path': vehicle_image_path
                 })
         
         return results
@@ -228,6 +239,33 @@ class VehicleDetector:
             return False
         
         return None  # Uncertain
+
+    def _save_vehicle_image(self, frame: np.ndarray, box: tuple, 
+                            vehicle_type: str) -> str:
+        """Save a crop of the detected vehicle. Returns filename."""
+        x, y, w, h = box
+        # Add padding
+        pad = 20
+        fh, fw = frame.shape[:2]
+        x1 = max(0, x - pad)
+        y1 = max(0, y - pad)
+        x2 = min(fw, x + w + pad)
+        y2 = min(fh, y + h + pad)
+        
+        vehicle_crop = frame[y1:y2, x1:x2]
+        if vehicle_crop.size == 0:
+            return ""
+        
+        # Resize to save space
+        vehicle_crop = cv2.resize(vehicle_crop, (200, 150))
+        
+        from datetime import datetime
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"{vehicle_type}_{timestamp}.jpg"
+        filepath = os.path.join(self.vehicles_dir, filename)
+        cv2.imwrite(filepath, vehicle_crop, [cv2.IMWRITE_JPEG_QUALITY, 60])
+        
+        return filename
 
     def draw_vehicles_on_frame(self, frame: np.ndarray, 
                                detections: List[Dict]) -> np.ndarray:

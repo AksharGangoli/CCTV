@@ -80,7 +80,7 @@ class PlateDetector:
         """
         self.db = db
         self.config = config
-        self.confidence_threshold = config.get('confidence', 0.3)
+        self.confidence_threshold = config.get('confidence', 0.1)  # Save everything, even low confidence
         self.save_plate_images = config.get('save_plate_images', True)
         
         # Storage
@@ -143,15 +143,24 @@ class PlateDetector:
                     print(f"[ANPR] OCR read: '{plate_text}' (confidence: {confidence:.0%})")
                 
                 if plate_text and confidence >= self.confidence_threshold:
+                    # Save plate image ALWAYS (regardless of pattern match)
+                    image_path = ""
+                    if self.save_plate_images:
+                        clean_text = re.sub(r'[^A-Z0-9]', '', plate_text.upper())[:12]
+                        if not clean_text:
+                            clean_text = "UNKNOWN"
+                        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                        img_filename = f"{clean_text}_{timestamp}.jpg"
+                        img_filepath = os.path.join(self.plates_dir, img_filename)
+                        plate_img_resized = cv2.resize(plate_img, (200, 60))
+                        cv2.imwrite(img_filepath, plate_img_resized, [cv2.IMWRITE_JPEG_QUALITY, 60])
+                        image_path = img_filename
+                    
                     parsed = self._parse_indian_plate(plate_text)
                     
                     if parsed:
                         if self._is_in_cooldown(parsed['full_plate']):
                             continue
-                        
-                        image_path = ""
-                        if self.save_plate_images:
-                            image_path = self._save_plate_image(plate_img, parsed['full_plate'])
                         
                         is_blacklisted = self.db.is_plate_blacklisted(parsed['full_plate'])
                         
