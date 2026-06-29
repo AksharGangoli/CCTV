@@ -198,7 +198,11 @@ class FaceDetector:
 
     def _detect_with_opencv(self, frame: np.ndarray, 
                             camera_name: str) -> List[Dict]:
-        """Detect faces using OpenCV (fallback, less accurate but no dlib needed)."""
+        """Detect faces using OpenCV (fallback, no face matching available).
+        
+        Without dlib/face_recognition, we can only DETECT faces, not RECOGNIZE.
+        Saves to DB only once every 5 minutes per camera to prevent duplicates.
+        """
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         
         faces = self.cv2_face_cascade.detectMultiScale(
@@ -209,43 +213,14 @@ class FaceDetector:
         results = []
         current_time = time.time()
         
+        # Track last save time per camera (max 1 face save per 5 minutes)
+        save_key = f"_opencv_save_{camera_name}"
+        last_save_time = self._last_detection_time.get(save_key, 0)
+        if isinstance(last_save_time, dict):
+            last_save_time = last_save_time.get('time', 0)
+        
         for (x, y, w, h) in faces:
             top, right, bottom, left = y, x + w, y + h, x
-            
-            # Position-based dedup: check if a face was recently detected
-            # in roughly the same location (within 80px)
-            center_x = x + w // 2
-            center_y = y + h // 2
-            
-            is_duplicate = False
-            for key, last_data in self._last_detection_time.items():
-                if isinstance(last_data, dict):
-                    last_time = last_data.get('time', 0)
-                    last_x = last_data.get('x', 0)
-                    last_y = last_data.get('y', 0)
-                    
-                    # If within cooldown AND similar position → skip
-                    time_diff = current_time - last_time
-                    pos_diff = abs(center_x - last_x) + abs(center_y - last_y)
-                    
-                    if time_diff < self.cooldown and pos_diff < 80:
-                        is_duplicate = True
-                        # Update position
-                        last_data['x'] = center_x
-                        last_data['y'] = center_y
-                        last_data['time'] = current_time
-                        break
-            
-            if is_duplicate:
-                continue
-            
-            # New face detection - save with position tracking
-            face_key = f"opencv_{camera_name}_{len(self._last_detection_time)}"
-            self._last_detection_time[face_key] = {
-                'time': current_time,
-                'x': center_x,
-                'y': center_y
-            }
             
             result = {
                 'name': 'Unknown',
@@ -254,30 +229,29 @@ class FaceDetector:
                 'category': 'unknown',
                 'is_blacklisted': False,
                 'face_id': None,
-                'is_new': True,
-                'in_cooldown': False
+                'is_new': False,
+                'in_cooldown': True
             }
             
-            # Save face thumbnail (but NOT as new DB entry every frame)
-            if self.save_unknown:
+            # Only save 1 new face to DB every 5 minutes per camera
+            if self.save_unknown and (current_time - last_save_time) > 300:
                 thumbnail_path = self._save_face_thumbnail(
                     frame, (top, right, bottom, left), "Unknown", camera_name
                 )
-                # Only save to DB if we haven't saved too many recently
-                recent_saves = sum(1 for k, v in self._last_detection_time.items()
-                                  if isinstance(v, dict) and current_time - v.get('time', 0) < 60)
-                
-                if recent_saves <= 3:  # Max 3 new face saves per minute
-                    face_id = self.db.add_face(
-                        name="Unknown",
-                        encoding=np.zeros(128),  # Placeholder encoding for OpenCV mode
-                        thumbnail_path=thumbnail_path,
-                        camera_name=camera_name,
-                        category="unknown"
-                    )
-                    result['face_id'] = face_id
+                face_id = self.db.add_face(
+                    name="Unknown",
+                    encoding=np.zeros(128),
+                    thumbnail_path=thumbnail_path,
+                    camera_name=camera_name,
+                    category="unknown"
+                )
+                result['face_id'] = face_id
+                result['is_new'] = True
+                result['in_cooldown'] = False
+                self._last_detection_time[save_key] = current_time
             
             results.append(result)
+            break  # Only process first detected face per frame
         
         return results
 
