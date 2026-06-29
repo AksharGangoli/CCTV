@@ -8,7 +8,7 @@
 # --- GENERAL SETTINGS ---
 app:
   name: "Smart CCTV Monitor"
-  demo_mode: true
+  demo_mode: false
   frame_skip: 3
   country: "india"
   max_cameras: 16

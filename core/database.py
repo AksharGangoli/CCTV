@@ -49,9 +49,13 @@ class Database:
         self.conn.row_factory = sqlite3.Row  # Return rows as dicts
         self.cursor = self.conn.cursor()
         
+        # Enable WAL mode for better concurrent access (multiple threads reading/writing)
+        self.conn.execute("PRAGMA journal_mode=WAL;")
+        self.conn.execute("PRAGMA synchronous=NORMAL;")
+        
         # Create all tables
         self._create_tables()
-        print(f"[DATABASE] Connected to: {db_path}")
+        print(f"[DATABASE] Connected to: {db_path} (WAL mode)")
 
 
     def _create_tables(self):

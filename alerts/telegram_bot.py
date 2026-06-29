@@ -73,6 +73,7 @@ class TelegramBot:
             '/faces': self._cmd_faces,
             '/plates': self._cmd_plates,
             '/report': self._cmd_report,
+            '/snapshot': self._cmd_snapshot,
         }
         
         if self.enabled and self.two_way_enabled:
@@ -362,3 +363,34 @@ class TelegramBot:
             except Exception as e:
                 return f"⚠️ Error generating report: {e}"
         return "⚠️ Report generator not available"
+
+    def _cmd_snapshot(self) -> str:
+        """Send current frame from each online camera as a photo."""
+        if not self.monitor or not hasattr(self.monitor, 'camera_manager'):
+            return "⚠️ Camera manager not available"
+        
+        frames = self.monitor.camera_manager.get_all_frames()
+        if not frames:
+            return "📷 No cameras connected"
+        
+        sent = 0
+        for cam_name, frame in frames.items():
+            if frame is not None:
+                self._send_photo(self.chat_id, frame, f"📹 {cam_name}")
+                sent += 1
+        
+        if sent > 0:
+            return f"📷 Sent {sent} snapshot(s)"
+        return "📷 No frames available"
+
+    def _send_photo(self, chat_id: str, frame, caption: str = ""):
+        """Send a photo (numpy frame) to Telegram."""
+        try:
+            import cv2
+            url = f"{self.base_url}/sendPhoto"
+            _, img_encoded = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 70])
+            files = {'photo': ('snapshot.jpg', img_encoded.tobytes(), 'image/jpeg')}
+            data = {'chat_id': chat_id, 'caption': caption[:1024]}
+            requests.post(url, data=data, files=files, timeout=15)
+        except Exception as e:
+            print(f"[TELEGRAM BOT] Photo send error: {e}")
