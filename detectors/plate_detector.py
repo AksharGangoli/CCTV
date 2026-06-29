@@ -135,6 +135,21 @@ class PlateDetector:
             for region in plate_regions:
                 x, y, w, h = region
                 plate_img = frame[y:y+h, x:x+w]
+                
+                # Save plate region photo ALWAYS (every detection)
+                image_path = ""
+                if self.save_plate_images and plate_img.size > 0:
+                    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+                    img_filename = f"plate_{timestamp}.jpg"
+                    img_filepath = os.path.join(self.plates_dir, img_filename)
+                    try:
+                        plate_img_resized = cv2.resize(plate_img, (200, 60))
+                        cv2.imwrite(img_filepath, plate_img_resized, [cv2.IMWRITE_JPEG_QUALITY, 60])
+                        image_path = img_filename
+                    except Exception:
+                        pass
+                
+                # Try OCR on the region
                 processed = self._preprocess_plate(plate_img)
                 plate_text, confidence = self._read_plate_text(processed)
                 
@@ -143,18 +158,17 @@ class PlateDetector:
                     print(f"[ANPR] OCR read: '{plate_text}' (confidence: {confidence:.0%})")
                 
                 if plate_text and confidence >= self.confidence_threshold:
-                    # Save plate image ALWAYS (regardless of pattern match)
-                    image_path = ""
-                    if self.save_plate_images:
+                    # Rename the saved image with the plate text
+                    if image_path and plate_text:
                         clean_text = re.sub(r'[^A-Z0-9]', '', plate_text.upper())[:12]
-                        if not clean_text:
-                            clean_text = "UNKNOWN"
-                        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                        img_filename = f"{clean_text}_{timestamp}.jpg"
-                        img_filepath = os.path.join(self.plates_dir, img_filename)
-                        plate_img_resized = cv2.resize(plate_img, (200, 60))
-                        cv2.imwrite(img_filepath, plate_img_resized, [cv2.IMWRITE_JPEG_QUALITY, 60])
-                        image_path = img_filename
+                        if clean_text:
+                            new_filename = f"{clean_text}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg"
+                            new_filepath = os.path.join(self.plates_dir, new_filename)
+                            try:
+                                os.rename(img_filepath, new_filepath)
+                                image_path = new_filename
+                            except Exception:
+                                pass
                     
                     parsed = self._parse_indian_plate(plate_text)
                     
@@ -195,6 +209,33 @@ class PlateDetector:
                         status = "⚠️ BLACKLISTED" if is_blacklisted else "✓"
                         print(f"[ANPR] {status} Plate: {parsed['full_plate']} "
                               f"({parsed['state_name']}) [{confidence:.0%}]")
+                
+                # If we have a photo but no successful parse, still save to DB as "unread"
+                # (max once per 30 seconds to avoid flooding)
+                elif image_path and not plate_text:
+                    unread_key = f"_unread_{camera_name}"
+                    last_unread = self._last_plates.get(unread_key)
+                    if last_unread is None or (datetime.now() - last_unread).total_seconds() > 30:
+                        self._last_plates[unread_key] = datetime.now()
+                        plate_id = self.db.add_plate(
+                            plate_number="[Unread]",
+                            vehicle_type="unknown",
+                            image_path=image_path,
+                            camera_name=camera_name,
+                            confidence=0.0,
+                            state_code="", district_code="", series="", number=""
+                        )
+                        results.append({
+                            'plate_number': '[Unread]',
+                            'state': 'Unknown', 'state_code': '',
+                            'district_code': '', 'series': '', 'number': '',
+                            'location': (x, y, w, h),
+                            'confidence': 0.0,
+                            'image_path': image_path,
+                            'is_blacklisted': False,
+                            'plate_id': plate_id
+                        })
+                    
         except Exception as e:
             print(f"[ANPR] Error detecting plates: {e}")
         

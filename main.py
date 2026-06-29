@@ -340,6 +340,8 @@ class CCTVMonitor:
 
     def _process_camera(self, camera_name: str, frame):
         """Process a single camera frame. Runs in thread pool."""
+        if not self._running:
+            return
         try:
             # Get camera config from cache (O(1) lookup)
             cam_config = self._camera_config_cache.get(camera_name, {
@@ -471,7 +473,11 @@ class CCTVMonitor:
         """Auto-reconnect dropped cameras. Runs every 10 seconds."""
         while self._running:
             time.sleep(10)
+            if not self._running:
+                break
             for name, camera in self.camera_manager.cameras.items():
+                if not self._running:
+                    break
                 if camera.enabled and not camera.is_connected:
                     print(f"[WATCHDOG] {name} offline, reconnecting...")
                     try:
