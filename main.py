@@ -502,26 +502,39 @@ class CCTVMonitor:
                 pass
 
     def _save_event_clip(self, camera_name: str, event_type: str):
-        """Save a short video clip from the frame buffer when an event occurs."""
+        """Save a video clip with pre-event + post-event frames."""
         try:
             buffer = self._frame_buffers.get(camera_name)
             if not buffer or len(buffer) < 5:
                 return
             
-            frames = list(buffer)
+            # Pre-event frames (already captured in ring buffer)
+            pre_frames = list(buffer)
+            
+            # Post-event: capture 5 more seconds after the event
+            post_frames = []
+            post_start = time.time()
+            while time.time() - post_start < 5.0 and self._running:
+                new_frame = self.camera_manager.get_frame(camera_name)
+                if new_frame is not None:
+                    post_frames.append(new_frame.copy())
+                time.sleep(0.1)
+            
+            all_frames = pre_frames + post_frames
+            
             timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
             clean_name = camera_name.replace(' ', '_').replace('/', '_')
             filepath = f"recordings/{clean_name}_{event_type}_{timestamp}.avi"
             
-            h, w = frames[0].shape[:2]
+            h, w = all_frames[0].shape[:2]
             fourcc = cv2.VideoWriter_fourcc(*'XVID')
             out = cv2.VideoWriter(filepath, fourcc, 10.0, (w, h))
             
-            for frame in frames:
+            for frame in all_frames:
                 out.write(frame)
             out.release()
             
-            print(f"[CLIP] Saved event clip: {filepath} ({len(frames)} frames)")
+            print(f"[CLIP] Saved: {filepath} ({len(pre_frames)} pre + {len(post_frames)} post frames)")
         except Exception as e:
             print(f"[CLIP] Error saving clip: {e}")
 

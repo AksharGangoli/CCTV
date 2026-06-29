@@ -872,13 +872,9 @@ def _register_system_routes(app):
 
     @app.route("/api/health")
     def health_check():
-        """
-        System health check (publicly accessible).
-        Returns service status for monitoring/load-balancers.
-        """
+        """System health check (publicly accessible)."""
         db = _get_db(app)
         camera_mgr = getattr(app.monitor, "camera_manager", None) if app.monitor else None
-
         status = {
             "status": "healthy",
             "timestamp": datetime.now().isoformat(),
@@ -889,12 +885,37 @@ def _register_system_routes(app):
                 "monitor": "up" if app.monitor else "down",
             },
         }
-
-        # Overall status based on critical services
         if not db or not app.monitor:
             status["status"] = "degraded"
-
         return jsonify(status)
+
+    @app.route("/api/storage_usage")
+    def storage_usage():
+        """Get storage usage in MB for the dashboard gauge."""
+        try:
+            total_bytes = 0
+            for dirpath, _, files in os.walk('storage'):
+                for f in files:
+                    fp = os.path.join(dirpath, f)
+                    total_bytes += os.path.getsize(fp)
+            # Also count recordings
+            if os.path.exists('recordings'):
+                for dirpath, _, files in os.walk('recordings'):
+                    for f in files:
+                        fp = os.path.join(dirpath, f)
+                        total_bytes += os.path.getsize(fp)
+            
+            used_mb = round(total_bytes / (1024 * 1024), 1)
+            config = _get_config(app)
+            limit_mb = config.get('storage', {}).get('max_storage_mb', 5000)
+            
+            return jsonify({
+                'used_mb': used_mb,
+                'limit_mb': limit_mb,
+                'percentage': round((used_mb / limit_mb) * 100, 1) if limit_mb > 0 else 0
+            })
+        except Exception:
+            return jsonify({'used_mb': 0, 'limit_mb': 5000, 'percentage': 0})
 
     @app.route("/api/system/status")
     def system_status():

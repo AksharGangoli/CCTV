@@ -288,7 +288,7 @@ class FaceDetector:
                 is_new = False
                 
                 # Check cooldown
-                if self._is_in_cooldown(face_id):
+                if self._is_in_cooldown(face_id, camera_name):
                     return {
                         'name': name,
                         'location': location,
@@ -302,7 +302,7 @@ class FaceDetector:
                 
                 # Update last seen in database
                 self.db.update_face_seen(face_id)
-                self._last_detection_time[face_id] = time.time()
+                self._last_detection_time[f"{face_id}_{camera_name}"] = time.time()
                 
                 # Check if blacklisted
                 is_blacklisted = category == 'suspicious'
@@ -323,9 +323,12 @@ class FaceDetector:
             'in_cooldown': False
         }
 
-    def _is_in_cooldown(self, face_id: int) -> bool:
-        """Check if a face was recently detected (within cooldown period)."""
-        last_time = self._last_detection_time.get(face_id, 0)
+    def _is_in_cooldown(self, face_id: int, camera_name: str = "") -> bool:
+        """Check if a face was recently detected on THIS camera (per-camera cooldown)."""
+        key = f"{face_id}_{camera_name}" if camera_name else face_id
+        last_time = self._last_detection_time.get(key, 0)
+        if isinstance(last_time, dict):
+            last_time = last_time.get('time', 0)
         return (time.time() - last_time) < self.cooldown
 
     def _save_new_face(self, encoding: np.ndarray, frame: np.ndarray,
