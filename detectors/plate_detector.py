@@ -362,7 +362,7 @@ class PlateDetector:
 
     def _save_plate_image(self, plate_img: np.ndarray, 
                           plate_number: str) -> str:
-        """Save plate image crop to disk."""
+        """Save plate image crop to disk. Returns just filename for web serving."""
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         clean_plate = plate_number.replace(' ', '_')
         filename = f"{clean_plate}_{timestamp}.jpg"
@@ -372,7 +372,8 @@ class PlateDetector:
         plate_img = cv2.resize(plate_img, (200, 60))
         cv2.imwrite(filepath, plate_img, [cv2.IMWRITE_JPEG_QUALITY, 60])
         
-        return filepath
+        # Return just filename (not full path) for cross-platform web serving
+        return filename
 
     def _is_in_cooldown(self, plate_number: str) -> bool:
         """Check if plate was recently detected."""

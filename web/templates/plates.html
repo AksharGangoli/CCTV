@@ -34,33 +34,26 @@
             {% for vehicle in vehicles %}
             <div class="face-card vehicle-card" data-type="{{ vehicle.vehicle_type }}">
                 <div class="face-image" style="width: 100%; height: 120px; border-radius: 8px;">
-                    {% if vehicle.get('image_path') %}
-                    <img src="/static/plates/{{ vehicle.image_path.split('/')[-1] }}" 
-                         alt="{{ vehicle.plate_id or 'Vehicle' }}"
-                         style="width: 100%; height: 100%; object-fit: cover; border-radius: 8px;"
-                         onerror="this.parentElement.innerHTML='<div class=\'no-image\' style=\'height:100%\'><i class=\'fas fa-car fa-3x\'></i></div>'">
-                    {% else %}
                     <div class="no-image" style="height: 100%;">
+                        {% if vehicle.vehicle_type == 'car' %}
                         <i class="fas fa-car fa-3x"></i>
+                        {% elif vehicle.vehicle_type == 'motorcycle' %}
+                        <i class="fas fa-motorcycle fa-3x"></i>
+                        {% elif vehicle.vehicle_type == 'bus' %}
+                        <i class="fas fa-bus fa-3x"></i>
+                        {% elif vehicle.vehicle_type == 'truck' %}
+                        <i class="fas fa-truck fa-3x"></i>
+                        {% else %}
+                        <i class="fas fa-car fa-3x"></i>
+                        {% endif %}
                     </div>
-                    {% endif %}
                 </div>
-                <!-- Plate Number as Caption -->
-                {% if vehicle.plate_id %}
-                <div style="margin-top: 10px; padding: 6px 12px; background: var(--darker); color: #fff; border-radius: 6px; font-family: monospace; font-size: 1rem; font-weight: 700; letter-spacing: 1px; text-align: center;">
-                    {{ vehicle.plate_id }}
-                </div>
-                {% endif %}
+                <!-- Vehicle Type Badge -->
                 <div style="margin-top: 8px;">
-                    <!-- Vehicle Type Badge -->
                     {% set type_colors = {'car': '#2563eb', 'motorcycle': '#7c3aed', 'bus': '#f59e0b', 'truck': '#64748b', 'auto_rickshaw': '#10b981', 'bicycle': '#0d9488'} %}
                     <span class="badge" style="background: {{ type_colors.get(vehicle.vehicle_type, '#64748b') }}20; color: {{ type_colors.get(vehicle.vehicle_type, '#64748b') }};">
-                        <i class="fas fa-{{ 'car' if vehicle.vehicle_type == 'car' else 'motorcycle' if vehicle.vehicle_type == 'motorcycle' else 'bus' if vehicle.vehicle_type == 'bus' else 'truck' if vehicle.vehicle_type == 'truck' else 'shuttle-van' if vehicle.vehicle_type == 'auto_rickshaw' else 'bicycle' }}"></i>
                         {{ vehicle.vehicle_type|replace('_', ' ')|title }}
                     </span>
-                    {% if vehicle.get('color') %}
-                    <span class="badge badge-info" style="margin-left: 4px;">{{ vehicle.color|title }}</span>
-                    {% endif %}
                 </div>
                 <!-- Helmet Status for Motorcycles -->
                 {% if vehicle.vehicle_type == 'motorcycle' %}
@@ -116,6 +109,11 @@
                 {% for plate in plates %}
                 <tr class="{{ 'row-danger' if plate.get('is_blacklisted') }}" data-plate="{{ plate.plate_number }}">
                     <td>
+                        {% if plate.get('image_path') %}
+                        <img src="/static/plates/{{ plate.image_path.replace('\\', '/').split('/')[-1] }}" 
+                             style="width: 80px; height: 25px; object-fit: cover; border-radius: 4px; margin-right: 8px; vertical-align: middle;"
+                             onerror="this.style.display='none'">
+                        {% endif %}
                         <span style="font-family: monospace; font-weight: 700; font-size: 0.95rem; letter-spacing: 0.5px;">
                             {{ plate.plate_number }}
                         </span>
@@ -131,7 +129,7 @@
                     <td><i class="fas fa-camera" style="color: var(--primary); margin-right: 4px;"></i>{{ plate.camera_name }}</td>
                     <td>{{ plate.detected_at }}</td>
                     <td>
-                        {% set conf = plate.get('confidence', 0) %}
+                        {% set conf = (plate.get('confidence', 0) * 100)|int %}
                         <span class="badge {{ 'badge-success' if conf >= 80 else 'badge-info' if conf >= 60 else 'badge-danger' }}">
                             {{ conf }}%
                         </span>

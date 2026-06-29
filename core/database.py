@@ -340,17 +340,20 @@ class Database:
 
     def get_vehicles(self, vehicle_type: str = None, limit: int = 50) -> List[Dict]:
         """Get vehicle detections, optionally filtered by type."""
-        if vehicle_type:
-            self.cursor.execute(
-                "SELECT * FROM vehicles WHERE vehicle_type = ? ORDER BY detected_at DESC LIMIT ?",
-                (vehicle_type, limit)
-            )
-        else:
-            self.cursor.execute(
-                "SELECT * FROM vehicles ORDER BY detected_at DESC LIMIT ?",
-                (limit,)
-            )
-        return [dict(row) for row in self.cursor.fetchall()]
+        if self._closed:
+            return []
+        with self._lock:
+            if vehicle_type:
+                self.cursor.execute(
+                    "SELECT * FROM vehicles WHERE vehicle_type = ? ORDER BY detected_at DESC LIMIT ?",
+                    (vehicle_type, limit)
+                )
+            else:
+                self.cursor.execute(
+                    "SELECT * FROM vehicles ORDER BY detected_at DESC LIMIT ?",
+                    (limit,)
+                )
+            return [dict(row) for row in self.cursor.fetchall()]
 
     # ========================
     # EVENT/ALERT OPERATIONS
