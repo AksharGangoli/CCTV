@@ -232,6 +232,14 @@ class CCTVMonitor:
         cleanup_thread = threading.Thread(target=self._cleanup_scheduler, daemon=True)
         cleanup_thread.start()
         
+        # Start camera watchdog (auto-reconnect dropped cameras)
+        watchdog_thread = threading.Thread(target=self._camera_watchdog, daemon=True)
+        watchdog_thread.start()
+        
+        # Start config hot-reload watcher
+        config_thread = threading.Thread(target=self._config_watcher, daemon=True)
+        config_thread.start()
+        
         web_config = self.config.get('web', {})
         port = web_config.get('port', 5000)
         
@@ -272,6 +280,13 @@ class CCTVMonitor:
         # Previous frames for motion detection
         self._prev_frames = {}
         
+        # Per-camera frame counters (thread-safe, no shared counter)
+        self._frame_counts = {}
+        
+        # Frame buffers for motion-triggered clip saving (last ~50 frames per camera)
+        from collections import deque
+        self._frame_buffers = {}
+        
         # Adaptive frame skip
         self._adaptive_skip = self.frame_skip
         
@@ -284,18 +299,23 @@ class CCTVMonitor:
                     # Get frames from all cameras
                     frames = self.camera_manager.get_all_frames()
                     
-                    self._frame_count += 1
-                    
-                    # Skip frames for performance (adaptive)
-                    if self._frame_count % self._adaptive_skip != 0:
-                        time.sleep(0.005)
-                        continue
-                    
                     # Process cameras in parallel
                     futures = []
                     for camera_name, frame in frames.items():
                         if frame is None:
                             continue
+                        
+                        # Per-camera frame skip (thread-safe)
+                        self._frame_counts[camera_name] = self._frame_counts.get(camera_name, 0) + 1
+                        if self._frame_counts[camera_name] % self._adaptive_skip != 0:
+                            continue
+                        
+                        # Store frame in ring buffer for clip saving
+                        if camera_name not in self._frame_buffers:
+                            from collections import deque
+                            self._frame_buffers[camera_name] = deque(maxlen=50)
+                        self._frame_buffers[camera_name].append(frame.copy())
+                        
                         futures.append(
                             executor.submit(self._process_camera, camera_name, frame)
                         )
@@ -304,7 +324,7 @@ class CCTVMonitor:
                     for future in futures:
                         try:
                             future.result(timeout=5)
-                        except Exception as e:
+                        except Exception:
                             pass  # Individual camera errors don't stop the loop
                     
                     # Adaptive frame skip based on CPU
@@ -391,6 +411,9 @@ class CCTVMonitor:
                         severity=threat['severity'],
                         image=frame, camera_name=camera_name
                     )
+                    # Save event clip when threat detected
+                    if threat['severity'] in ('high', 'critical'):
+                        self._save_event_clip(camera_name, threat['type'])
             
             # Entry/Exit Counting
             if cam_config.get('count_entry_exit', True):
@@ -440,6 +463,67 @@ class CCTVMonitor:
                 self._adaptive_skip = max(self._adaptive_skip - 1, self.frame_skip)
         except ImportError:
             pass  # psutil not available, keep static frame_skip
+
+    def _camera_watchdog(self):
+        """Auto-reconnect dropped cameras. Runs every 10 seconds."""
+        while self._running:
+            time.sleep(10)
+            for name, camera in self.camera_manager.cameras.items():
+                if camera.enabled and not camera.is_connected:
+                    print(f"[WATCHDOG] {name} offline, reconnecting...")
+                    try:
+                        camera.reconnect()
+                        if camera.is_connected:
+                            print(f"[WATCHDOG] {name} reconnected!")
+                            camera.start_continuous()
+                    except Exception as e:
+                        print(f"[WATCHDOG] {name} reconnect failed: {e}")
+
+    def _config_watcher(self):
+        """Watch config.yaml for changes and hot-reload."""
+        config_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'config.yaml')
+        try:
+            last_mtime = os.path.getmtime(config_path)
+        except Exception:
+            return
+        
+        while self._running:
+            time.sleep(5)
+            try:
+                mtime = os.path.getmtime(config_path)
+                if mtime != last_mtime:
+                    last_mtime = mtime
+                    self.config = self._load_config(config_path)
+                    self._camera_config_cache = {
+                        c['name']: c for c in self.config.get('cameras', [])
+                    }
+                    print("[CONFIG] Hot-reloaded configuration")
+            except Exception as e:
+                pass
+
+    def _save_event_clip(self, camera_name: str, event_type: str):
+        """Save a short video clip from the frame buffer when an event occurs."""
+        try:
+            buffer = self._frame_buffers.get(camera_name)
+            if not buffer or len(buffer) < 5:
+                return
+            
+            frames = list(buffer)
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            clean_name = camera_name.replace(' ', '_').replace('/', '_')
+            filepath = f"recordings/{clean_name}_{event_type}_{timestamp}.avi"
+            
+            h, w = frames[0].shape[:2]
+            fourcc = cv2.VideoWriter_fourcc(*'XVID')
+            out = cv2.VideoWriter(filepath, fourcc, 10.0, (w, h))
+            
+            for frame in frames:
+                out.write(frame)
+            out.release()
+            
+            print(f"[CLIP] Saved event clip: {filepath} ({len(frames)} frames)")
+        except Exception as e:
+            print(f"[CLIP] Error saving clip: {e}")
 
     def _start_web_dashboard(self):
         """Start the web dashboard server."""
