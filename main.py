@@ -498,6 +498,10 @@ For more help, see README.md
     
     parser.add_argument('--demo', action='store_true',
                        help='Run in demo mode without real cameras')
+    parser.add_argument('--quiet', '-q', action='store_true',
+                       help='Quiet mode - minimal console output (only errors)')
+    parser.add_argument('--verbose', '-v', action='store_true',
+                       help='Verbose mode - show all debug messages')
     parser.add_argument('--config', type=str, default='config.yaml',
                        help='Path to configuration file (default: config.yaml)')
     parser.add_argument('--port', type=int, default=None,
@@ -516,6 +520,26 @@ For more help, see README.md
     for directory in ['storage/faces', 'storage/plates', 'recordings', 
                       'logs', 'reports', 'known_faces', 'demo_videos']:
         os.makedirs(directory, exist_ok=True)
+    
+    # Setup logging level based on quiet/verbose
+    if args.quiet:
+        import logging
+        logging.disable(logging.CRITICAL)
+        # Redirect prints to null in quiet mode
+        import io
+        import sys as _sys
+        class QuietPrint:
+            def write(self, msg):
+                # Only show critical errors
+                if 'ERROR' in str(msg) or 'Traceback' in str(msg):
+                    _sys.__stdout__.write(msg)
+            def flush(self):
+                pass
+        sys.stdout = QuietPrint()
+        # Still show the startup banner
+        _sys.__stdout__.write("\n  CCTV Smart Monitor - Running in quiet mode\n")
+        _sys.__stdout__.write(f"  Web Dashboard: http://localhost:{args.port or 5000}\n")
+        _sys.__stdout__.write("  Press Ctrl+C to stop\n\n")
     
     # Initialize monitor
     monitor = CCTVMonitor(config_path=args.config, demo_mode=args.demo)
