@@ -1,13 +1,12 @@
 # ============================================================
 # CCTV SMART MONITOR - REQUIRED PACKAGES
 # ============================================================
-# 
-# IMPORTANT (Windows Users):
-# Before running "pip install -r requirements.txt", you MUST
-# install Visual Studio C++ Build Tools first!
-# See README.md for step-by-step instructions.
 #
-# Run: pip install -r requirements.txt
+# WINDOWS USERS: Install Visual Studio C++ Build Tools FIRST!
+# Download: https://visualstudio.microsoft.com/visual-cpp-build-tools/
+# Select "Desktop development with C++" → Install → Restart PC
+#
+# Then run: pip install -r requirements.txt
 # ============================================================
 
 # Core
@@ -39,8 +38,7 @@ requests>=2.31.0
 # Image Processing & Night Mode
 scikit-image>=0.21.0
 
-# Scheduling & Reports
-schedule>=1.2.0
+# Reports
 fpdf2>=2.7.0
 matplotlib>=3.7.0
 

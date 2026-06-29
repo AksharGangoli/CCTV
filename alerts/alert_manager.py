@@ -195,6 +195,9 @@ class AlertManager:
 
     def _send_telegram(self, message: str, image: np.ndarray = None):
         """Send alert via Telegram bot."""
+        if not self.telegram_token or not self.telegram_chat_id:
+            return  # Not configured, skip silently
+        
         try:
             base_url = f"https://api.telegram.org/bot{self.telegram_token}"
             
@@ -232,6 +235,9 @@ class AlertManager:
 
     def _send_whatsapp(self, message: str):
         """Send alert via WhatsApp (Twilio)."""
+        if not self.twilio_sid or not self.twilio_token or not self.wa_to:
+            return  # Not configured, skip silently
+        
         try:
             url = f"https://api.twilio.com/2010-04-01/Accounts/{self.twilio_sid}/Messages.json"
             
@@ -288,14 +294,19 @@ class AlertManager:
     # ========================
 
     def _play_sound(self):
-        """Play an alert sound/beep."""
+        """Play an alert sound/beep. Works on Windows, Mac, and Linux."""
         try:
-            # Cross-platform beep
-            print("\a")  # Terminal beep
-            # On Linux, try using system beep
-            os.system('echo -e "\a" 2>/dev/null || true')
-        except:
-            pass
+            import platform
+            system = platform.system()
+            if system == "Windows":
+                import winsound
+                winsound.Beep(1000, 500)  # 1000Hz for 500ms
+            elif system == "Darwin":  # macOS
+                os.system('afplay /System/Library/Sounds/Glass.aiff &')
+            else:  # Linux
+                os.system('paplay /usr/share/sounds/freedesktop/stereo/alarm-clock-elapsed.oga 2>/dev/null &')
+        except Exception:
+            pass  # Silently fail if sound not available
 
     # ========================
     # RATE LIMITING

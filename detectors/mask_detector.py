@@ -52,11 +52,11 @@ class MaskDetector:
         self.enabled = config.get('enabled', True)
         self.send_photo_telegram = config.get('send_photo_telegram', True)
         self.send_message_whatsapp = config.get('send_message_whatsapp', True)
-        self.confidence_threshold = config.get('confidence', 0.5)
+        self.confidence_threshold = config.get('confidence', 0.7)  # Higher threshold to reduce false positives
         
         # Cooldown to prevent spam alerts for same person
         self._last_alerts = {}  # {camera_name: timestamp}
-        self._cooldown_seconds = 30
+        self._cooldown_seconds = 120  # 2 minutes between mask alerts per camera
         
         # Storage for mask alert photos
         self.alerts_dir = "storage/mask_alerts"
@@ -252,8 +252,8 @@ class MaskDetector:
                     camera_name=camera_name
                 )
             
-            # Send message to WhatsApp
-            if self.send_message_whatsapp:
+            # Send message to WhatsApp (only if configured)
+            if self.send_message_whatsapp and self.alert_manager.whatsapp_enabled:
                 self.alert_manager._send_whatsapp(
                     f"🚨 MASKED PERSON ALERT\n"
                     f"Camera: {camera_name}\n"
