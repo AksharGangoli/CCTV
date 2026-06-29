@@ -80,7 +80,7 @@ class PlateDetector:
         """
         self.db = db
         self.config = config
-        self.confidence_threshold = config.get('confidence', 0.5)
+        self.confidence_threshold = config.get('confidence', 0.3)
         self.save_plate_images = config.get('save_plate_images', True)
         
         # Storage
@@ -94,10 +94,17 @@ class PlateDetector:
             self.reader = easyocr.Reader(['en'], gpu=False)
             print("[ANPR] OCR model loaded!")
         
-        # Indian plate regex patterns
+        # Indian plate regex patterns - multiple formats
         # Standard: MH 12 AB 1234 or MH12AB1234
         self.plate_pattern = re.compile(
             r'([A-Z]{2})\s*(\d{1,2})\s*([A-Z]{1,3})\s*(\d{1,4})',
+            re.IGNORECASE
+        )
+        
+        # Also accept plates without strict state validation
+        # (for better detection of partial reads)
+        self.plate_pattern_loose = re.compile(
+            r'([A-Z]{2})\s*(\d{1,2})\s*([A-Z0-9]{1,4})\s*(\d{1,4})',
             re.IGNORECASE
         )
         
@@ -130,6 +137,10 @@ class PlateDetector:
                 plate_img = frame[y:y+h, x:x+w]
                 processed = self._preprocess_plate(plate_img)
                 plate_text, confidence = self._read_plate_text(processed)
+                
+                # Debug: show what OCR reads
+                if plate_text:
+                    print(f"[ANPR] OCR read: '{plate_text}' (confidence: {confidence:.0%})")
                 
                 if plate_text and confidence >= self.confidence_threshold:
                     parsed = self._parse_indian_plate(plate_text)
@@ -204,6 +215,9 @@ class PlateDetector:
         
         # Remove duplicate/overlapping regions
         regions = self._remove_overlapping(regions)
+        
+        if regions:
+            print(f"[ANPR] Found {len(regions)} potential plate region(s)")
         
         return regions
 
@@ -326,15 +340,14 @@ class PlateDetector:
     def _parse_indian_plate(self, plate_text: str) -> Optional[Dict]:
         """
         Parse Indian number plate format.
-        
-        Format: XX 00 XX 0000
-        Example: MH 12 AB 1234
-        
-        Returns:
-            Parsed plate dict or None if not valid Indian format
+        Tries strict pattern first, then loose pattern.
         """
-        # Try to match Indian plate pattern
+        # Try strict pattern first
         match = self.plate_pattern.search(plate_text)
+        
+        if not match:
+            # Try loose pattern
+            match = self.plate_pattern_loose.search(plate_text)
         
         if match:
             state_code = match.group(1).upper()
@@ -342,9 +355,8 @@ class PlateDetector:
             series = match.group(3).upper()
             number = match.group(4)
             
-            # Validate state code
-            if state_code not in INDIAN_STATES:
-                return None
+            # Get state name (or use "Unknown State" if not found)
+            state_name = INDIAN_STATES.get(state_code, f"State: {state_code}")
             
             # Format the plate nicely
             full_plate = f"{state_code} {district_code} {series} {number}"
@@ -352,12 +364,27 @@ class PlateDetector:
             return {
                 'full_plate': full_plate,
                 'state_code': state_code,
-                'state_name': INDIAN_STATES[state_code],
+                'state_name': state_name,
                 'district_code': district_code,
                 'series': series,
                 'number': number
             }
         
+        # If no pattern matched but text looks like it could be a plate
+        # (has at least 6 alphanumeric characters), save it anyway
+        cleaned = re.sub(r'[^A-Z0-9]', '', plate_text.upper())
+        if len(cleaned) >= 6:
+            print(f"[ANPR] Partial plate detected: '{plate_text}' → saving as-is")
+            return {
+                'full_plate': plate_text.upper().strip(),
+                'state_code': cleaned[:2] if len(cleaned) >= 2 else '',
+                'state_name': INDIAN_STATES.get(cleaned[:2], 'Unknown'),
+                'district_code': '',
+                'series': '',
+                'number': cleaned
+            }
+        
+        print(f"[ANPR] Text '{plate_text}' did not match any plate pattern")
         return None
 
     def _save_plate_image(self, plate_img: np.ndarray, 
