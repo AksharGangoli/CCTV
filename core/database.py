@@ -229,7 +229,10 @@ class Database:
 
     def blacklist_face(self, face_id: int):
         """Mark a face as blacklisted (suspicious person)."""
-        self.cursor.execute(
+        if self._closed:
+            return
+        with self._lock:
+            self.cursor.execute(
             "UPDATE faces SET is_blacklisted = 1, category = 'suspicious' WHERE id = ?",
             (face_id,)
         )
@@ -237,7 +240,10 @@ class Database:
 
     def whitelist_face(self, face_id: int):
         """Mark a face as whitelisted (trusted person)."""
-        self.cursor.execute(
+        if self._closed:
+            return
+        with self._lock:
+            self.cursor.execute(
             "UPDATE faces SET is_whitelisted = 1 WHERE id = ?",
             (face_id,)
         )
@@ -285,7 +291,10 @@ class Database:
 
     def search_plate(self, query: str) -> List[Dict]:
         """Search for a number plate (partial match supported)."""
-        self.cursor.execute(
+        if self._closed:
+            return []
+        with self._lock:
+            self.cursor.execute(
             "SELECT * FROM number_plates WHERE plate_number LIKE ? ORDER BY detected_at DESC",
             (f"%{query}%",)
         )
@@ -293,7 +302,10 @@ class Database:
 
     def blacklist_plate(self, plate_number: str):
         """Mark a plate as blacklisted."""
-        self.cursor.execute(
+        if self._closed:
+            return
+        with self._lock:
+            self.cursor.execute(
             "UPDATE number_plates SET is_blacklisted = 1 WHERE plate_number = ?",
             (plate_number,)
         )
@@ -301,7 +313,10 @@ class Database:
 
     def is_plate_blacklisted(self, plate_number: str) -> bool:
         """Check if a plate is blacklisted."""
-        self.cursor.execute(
+        if self._closed:
+            return False
+        with self._lock:
+            self.cursor.execute(
             "SELECT is_blacklisted FROM number_plates WHERE plate_number = ? AND is_blacklisted = 1",
             (plate_number,)
         )
@@ -398,7 +413,10 @@ class Database:
 
     def acknowledge_event(self, event_id: int):
         """Mark an event as acknowledged/seen."""
-        self.cursor.execute(
+        if self._closed:
+            return
+        with self._lock:
+            self.cursor.execute(
             "UPDATE events SET acknowledged = 1 WHERE id = ?",
             (event_id,)
         )
@@ -422,33 +440,34 @@ class Database:
     def add_visitor(self, face_id: int, name: str, camera_name: str,
                     category: str = "unknown") -> int:
         """Add or update visitor record."""
-        # Check if visitor exists
-        self.cursor.execute(
-            "SELECT id, visit_count FROM visitors WHERE face_id = ?",
-            (face_id,)
-        )
-        existing = self.cursor.fetchone()
-        
-        if existing:
-            # Update existing visitor
-            new_count = existing['visit_count'] + 1
-            is_regular = 1 if new_count >= 5 else 0
-            self.cursor.execute("""
-                UPDATE visitors 
-                SET visit_count = ?, last_visit = CURRENT_TIMESTAMP, 
-                    is_regular = ?, name = ?
-                WHERE face_id = ?
-            """, (new_count, is_regular, name, face_id))
-            self.conn.commit()
-            return existing['id']
-        else:
-            # New visitor
-            self.cursor.execute("""
-                INSERT INTO visitors (face_id, name, category, camera_name)
-                VALUES (?, ?, ?, ?)
-            """, (face_id, name, category, camera_name))
-            self.conn.commit()
-            return self.cursor.lastrowid
+        if self._closed:
+            return 0
+        with self._lock:
+            # Check if visitor exists
+            self.cursor.execute(
+                "SELECT id, visit_count FROM visitors WHERE face_id = ?",
+                (face_id,)
+            )
+            existing = self.cursor.fetchone()
+            
+            if existing:
+                new_count = existing['visit_count'] + 1
+                is_regular = 1 if new_count >= 5 else 0
+                self.cursor.execute("""
+                    UPDATE visitors 
+                    SET visit_count = ?, last_visit = CURRENT_TIMESTAMP, 
+                        is_regular = ?, name = ?
+                    WHERE face_id = ?
+                """, (new_count, is_regular, name, face_id))
+                self.conn.commit()
+                return existing['id']
+            else:
+                self.cursor.execute("""
+                    INSERT INTO visitors (face_id, name, category, camera_name)
+                    VALUES (?, ?, ?, ?)
+                """, (face_id, name, category, camera_name))
+                self.conn.commit()
+                return self.cursor.lastrowid
 
     def get_visitors(self, category: str = None, regular_only: bool = False,
                      limit: int = 50) -> List[Dict]:
@@ -517,33 +536,39 @@ class Database:
 
     def save_daily_stats(self, stats: Dict):
         """Save daily statistics."""
-        today = datetime.date.today().isoformat()
-        self.cursor.execute("""
-            INSERT OR REPLACE INTO daily_stats 
-            (date, total_visitors, unique_faces, vehicles_detected, plates_read,
-             alerts_triggered, entries, exits, peak_hour, report_path)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            today,
-            stats.get('total_visitors', 0),
-            stats.get('unique_faces', 0),
-            stats.get('vehicles_detected', 0),
-            stats.get('plates_read', 0),
-            stats.get('alerts_triggered', 0),
-            stats.get('entries', 0),
-            stats.get('exits', 0),
-            stats.get('peak_hour', 0),
-            stats.get('report_path', '')
-        ))
-        self.conn.commit()
+        if self._closed:
+            return
+        with self._lock:
+            today = datetime.date.today().isoformat()
+            self.cursor.execute("""
+                INSERT OR REPLACE INTO daily_stats 
+                (date, total_visitors, unique_faces, vehicles_detected, plates_read,
+                 alerts_triggered, entries, exits, peak_hour, report_path)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                today,
+                stats.get('total_visitors', 0),
+                stats.get('unique_faces', 0),
+                stats.get('vehicles_detected', 0),
+                stats.get('plates_read', 0),
+                stats.get('alerts_triggered', 0),
+                stats.get('entries', 0),
+                stats.get('exits', 0),
+                stats.get('peak_hour', 0),
+                stats.get('report_path', '')
+            ))
+            self.conn.commit()
 
     def get_daily_stats(self, date: str = None) -> Optional[Dict]:
         """Get stats for a specific date."""
-        if date is None:
-            date = datetime.date.today().isoformat()
-        self.cursor.execute("SELECT * FROM daily_stats WHERE date = ?", (date,))
-        row = self.cursor.fetchone()
-        return dict(row) if row else None
+        if self._closed:
+            return None
+        with self._lock:
+            if date is None:
+                date = datetime.date.today().isoformat()
+            self.cursor.execute("SELECT * FROM daily_stats WHERE date = ?", (date,))
+            row = self.cursor.fetchone()
+            return dict(row) if row else None
 
     def get_today_summary(self) -> Dict:
         """Get a quick summary of today's activity."""
