@@ -14,6 +14,7 @@ env/
 storage/*.db
 storage/faces/
 storage/plates/
+storage/vehicles/
 recordings/*.mp4
 recordings/*.avi
 reports/*.pdf

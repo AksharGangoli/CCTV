@@ -54,6 +54,12 @@ from flask import (
 # ============================================================
 
 APP_CONFIG = {
+    # App version (single source of truth)
+    "VERSION": "1.2.0",
+    
+    # App start time (for uptime calculation)
+    "START_TIME": time.time(),
+    
     # Security
     "SECRET_KEY": "cctv-smart-monitor-secret-key-change-in-production",
     "SESSION_COOKIE_HTTPONLY": True,
@@ -178,6 +184,20 @@ def _safe_json(data, default=None):
     return data if data else default
 
 
+def _get_storage_mb():
+    """Calculate total storage usage in MB (shared helper)."""
+    total = 0
+    for d in ('storage', 'recordings'):
+        if os.path.exists(d):
+            for dp, _, files in os.walk(d):
+                for f in files:
+                    try:
+                        total += os.path.getsize(os.path.join(dp, f))
+                    except OSError:
+                        pass
+    return round(total / (1024 * 1024), 1)
+
+
 def _api_error(message, status_code=400):
     """Create a standardized API error response."""
     return jsonify({"success": False, "error": message}), status_code
@@ -230,7 +250,7 @@ def _register_middleware(app):
         return {
             "app_name": "Smart CCTV Monitor",
             "current_year": datetime.now().year,
-            "version": "2.0.0",
+            "version": APP_CONFIG["VERSION"],
             "username": session.get("username", ""),
         }
 
@@ -885,18 +905,7 @@ def _register_system_routes(app):
             cameras_online = sum(1 for s in statuses if s.get('connected'))
         
         # Storage
-        used_mb = 0
-        try:
-            for dirpath, _, files in os.walk('storage'):
-                for f in files:
-                    used_mb += os.path.getsize(os.path.join(dirpath, f))
-            if os.path.exists('recordings'):
-                for dirpath, _, files in os.walk('recordings'):
-                    for f in files:
-                        used_mb += os.path.getsize(os.path.join(dirpath, f))
-            used_mb = round(used_mb / (1024 * 1024), 1)
-        except Exception:
-            pass
+        used_mb = _get_storage_mb()
         
         status = "healthy"
         if not db or not app.monitor:
@@ -906,7 +915,8 @@ def _register_system_routes(app):
         
         return jsonify({
             "status": status,
-            "version": "1.2.0",
+            "version": APP_CONFIG["VERSION"],
+            "uptime_seconds": int(time.time() - APP_CONFIG["START_TIME"]),
             "cameras_online": cameras_online,
             "cameras_total": cameras_total,
             "storage_used_mb": used_mb,
@@ -919,22 +929,9 @@ def _register_system_routes(app):
     def storage_usage():
         """Get storage usage in MB for the dashboard gauge."""
         try:
-            total_bytes = 0
-            for dirpath, _, files in os.walk('storage'):
-                for f in files:
-                    fp = os.path.join(dirpath, f)
-                    total_bytes += os.path.getsize(fp)
-            # Also count recordings
-            if os.path.exists('recordings'):
-                for dirpath, _, files in os.walk('recordings'):
-                    for f in files:
-                        fp = os.path.join(dirpath, f)
-                        total_bytes += os.path.getsize(fp)
-            
-            used_mb = round(total_bytes / (1024 * 1024), 1)
+            used_mb = _get_storage_mb()
             config = _get_config(app)
             limit_mb = config.get('storage', {}).get('max_storage_mb', 5000)
-            
             return jsonify({
                 'used_mb': used_mb,
                 'limit_mb': limit_mb,

@@ -80,7 +80,6 @@ class CCTVMonitor:
         self.demo_mode = self.config['app'].get('demo_mode', False)
         self.frame_skip = self.config['app'].get('frame_skip', 3)
         self._running = False
-        self._frame_count = 0
 
 
         # Initialize all modules
