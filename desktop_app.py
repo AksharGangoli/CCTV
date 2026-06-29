@@ -489,7 +489,7 @@ class CCTVDesktopApp:
                             frame = self._monitor.night_mode.enhance(frame)
 
                         # Get camera config
-                        cam_config = self._monitor._get_camera_config(camera_name)
+                        cam_config = self._monitor._camera_config_cache.get(camera_name, {"detect_faces": True, "detect_plates": True, "detect_vehicles": True, "detect_loitering": True, "detect_mask": True, "count_entry_exit": True})
 
                         # Face detection
                         face_results = []
