@@ -172,7 +172,8 @@ class VehicleDetector:
                 vehicle_id = self.db.add_vehicle(
                     vehicle_type=vehicle_type,
                     camera_name=camera_name,
-                    helmet_detected=helmet_int
+                    helmet_detected=helmet_int,
+                    image_path=vehicle_image_path
                 )
                 
                 display_name = self.INDIAN_VEHICLES.get(vehicle_type, vehicle_type)

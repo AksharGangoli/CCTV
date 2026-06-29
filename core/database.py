@@ -57,6 +57,10 @@ class Database:
         self._create_tables()
         print(f"[DATABASE] Connected to: {db_path} (WAL mode)")
 
+    def _local_timestamp(self):
+        """Get current local timestamp string (not UTC)."""
+        return datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
 
     def _create_tables(self):
         """Create all database tables if they don't exist."""
@@ -110,9 +114,16 @@ class Database:
                 camera_name TEXT,
                 detected_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 direction TEXT DEFAULT '',
+                image_path TEXT DEFAULT '',
                 FOREIGN KEY (plate_id) REFERENCES number_plates(id)
             )
         """)
+        
+        # Add image_path column if missing (for existing databases)
+        try:
+            self.cursor.execute("ALTER TABLE vehicles ADD COLUMN image_path TEXT DEFAULT ''")
+        except Exception:
+            pass  # Column already exists
 
 
         # --- EVENTS/ALERTS TABLE ---
@@ -196,9 +207,9 @@ class Database:
         with self._lock:
             encoding_bytes = encoding.tobytes()
             self.cursor.execute("""
-                INSERT INTO faces (name, encoding, thumbnail_path, camera_name, category)
-                VALUES (?, ?, ?, ?, ?)
-            """, (name, encoding_bytes, thumbnail_path, camera_name, category))
+                INSERT INTO faces (name, encoding, thumbnail_path, camera_name, category, first_seen, last_seen)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, (name, encoding_bytes, thumbnail_path, camera_name, category, self._local_timestamp(), self._local_timestamp()))
             self.conn.commit()
             return self.cursor.lastrowid
 
@@ -286,10 +297,10 @@ class Database:
             self.cursor.execute("""
                 INSERT INTO number_plates 
                 (plate_number, state_code, district_code, series, number,
-                 vehicle_type, image_path, confidence, camera_name)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 vehicle_type, image_path, confidence, camera_name, detected_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (plate_number, state_code, district_code, series, number,
-                  vehicle_type, image_path, confidence, camera_name))
+                  vehicle_type, image_path, confidence, camera_name, self._local_timestamp()))
             self.conn.commit()
             return self.cursor.lastrowid
 
@@ -352,9 +363,9 @@ class Database:
         with self._lock:
             self.cursor.execute("""
                 INSERT INTO vehicles 
-                (vehicle_type, plate_id, color, helmet_detected, camera_name, direction)
-                VALUES (?, ?, ?, ?, ?, ?)
-            """, (vehicle_type, plate_id, color, helmet_detected, camera_name, direction))
+                (vehicle_type, plate_id, color, helmet_detected, camera_name, direction, image_path, detected_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """, (vehicle_type, plate_id, color, helmet_detected, camera_name, direction, image_path, self._local_timestamp()))
             self.conn.commit()
             return self.cursor.lastrowid
 
@@ -390,10 +401,10 @@ class Database:
             self.cursor.execute("""
                 INSERT INTO events 
                 (event_type, severity, description, camera_name, image_path,
-                 video_clip_path, face_id, plate_id)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                 video_clip_path, face_id, plate_id, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (event_type, severity, description, camera_name, image_path,
-                  video_clip_path, face_id, plate_id))
+                  video_clip_path, face_id, plate_id, self._local_timestamp()))
             self.conn.commit()
             return self.cursor.lastrowid
 
