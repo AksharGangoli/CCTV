@@ -291,7 +291,7 @@ class CCTVMonitor:
         self._adaptive_skip = self.frame_skip
         
         num_cameras = len(self.camera_manager.cameras)
-        max_workers = min(num_cameras, 4)  # Cap at 4 threads
+        max_workers = min(num_cameras, os.cpu_count() or 4)  # Scale with CPU cores
         
         with ThreadPoolExecutor(max_workers=max(max_workers, 1)) as executor:
             while self._running:
@@ -411,9 +411,13 @@ class CCTVMonitor:
                         severity=threat['severity'],
                         image=frame, camera_name=camera_name
                     )
-                    # Save event clip when threat detected
+                    # Save event clip when threat detected (in background thread, don't block pool)
                     if threat['severity'] in ('high', 'critical'):
-                        self._save_event_clip(camera_name, threat['type'])
+                        threading.Thread(
+                            target=self._save_event_clip,
+                            args=(camera_name, threat['type']),
+                            daemon=True
+                        ).start()
             
             # Entry/Exit Counting
             if cam_config.get('count_entry_exit', True):

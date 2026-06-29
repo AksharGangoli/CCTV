@@ -11,7 +11,7 @@
 # ============================================================
 
 # Core
-opencv-python>=4.8.0
+opencv-python>=4.8.0,<4.11
 numpy>=1.24.0,<2.6
 Pillow>=10.0.0
 
@@ -24,7 +24,7 @@ easyocr==1.7.2
 imutils>=0.5.4
 
 # Object/Vehicle Detection (YOLO)
-ultralytics>=8.0.0
+ultralytics>=8.0.0,<9.0
 
 # Web Dashboard
 flask>=3.0.0

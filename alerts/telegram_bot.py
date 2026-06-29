@@ -255,7 +255,10 @@ class TelegramBot:
         for cam in statuses:
             status_icon = "🟢" if cam.get('connected') else "🔴"
             msg += f"{status_icon} {cam['name']}\n"
-            msg += f"   Type: {cam['type']} | Frames: {cam.get('frames_read', 0)}\n\n"
+            msg += f"   Type: {cam['type']} | Frames: {cam.get('frames_read', 0)}\n"
+            if not cam.get('connected') and cam.get('last_frame_time'):
+                msg += f"   ⚠️ Last seen: {cam['last_frame_time']}\n"
+            msg += "\n"
         
         online = sum(1 for s in statuses if s.get('connected'))
         msg += f"━━━━━━━━━━━━━━━\n"

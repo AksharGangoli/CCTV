@@ -325,10 +325,10 @@ class FaceDetector:
 
     def _is_in_cooldown(self, face_id: int, camera_name: str = "") -> bool:
         """Check if a face was recently detected on THIS camera (per-camera cooldown)."""
-        key = f"{face_id}_{camera_name}" if camera_name else face_id
+        key = f"{face_id}_{camera_name}" if camera_name else str(face_id)
         last_time = self._last_detection_time.get(key, 0)
-        if isinstance(last_time, dict):
-            last_time = last_time.get('time', 0)
+        if not isinstance(last_time, (int, float)):
+            last_time = 0
         return (time.time() - last_time) < self.cooldown
 
     def _save_new_face(self, encoding: np.ndarray, frame: np.ndarray,

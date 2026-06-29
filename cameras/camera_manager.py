@@ -116,19 +116,19 @@ class Camera:
         print(f"[CAMERA] {self.name}: Disconnected")
 
     def reconnect(self) -> bool:
-        """Try to reconnect to the camera."""
-        if self.reconnect_attempts >= self.max_reconnect_attempts:
-            print(f"[CAMERA] {self.name}: Max reconnect attempts reached!")
-            return False
-        
+        """Try to reconnect to the camera with exponential backoff."""
         self.reconnect_attempts += 1
-        print(f"[CAMERA] {self.name}: Reconnecting... (attempt {self.reconnect_attempts})")
+        delay = min(self.reconnect_delay * self.reconnect_attempts, 60)  # max 60s backoff
+        print(f"[CAMERA] {self.name}: Reconnecting... (attempt {self.reconnect_attempts}, wait {delay}s)")
         
         if self.cap:
             self.cap.release()
         
-        time.sleep(self.reconnect_delay)
-        return self.connect()
+        time.sleep(delay)
+        result = self.connect()
+        if result:
+            self.reconnect_attempts = 0  # Reset on success
+        return result
 
     def read_frame(self) -> Optional[np.ndarray]:
         """
