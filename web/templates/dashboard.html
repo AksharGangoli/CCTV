@@ -60,6 +60,16 @@
             <p>Exits Today</p>
         </div>
     </div>
+    <div class="stat-card">
+        <div class="stat-icon gray"><i class="fas fa-hdd"></i></div>
+        <div class="stat-info">
+            <h3 id="stat-storage">-- MB</h3>
+            <p>Storage Used</p>
+            <div style="background:#e2e8f0;border-radius:4px;height:4px;margin-top:4px;">
+                <div id="storage-bar" style="background:var(--primary);height:4px;border-radius:4px;width:0%;transition:width 0.3s;"></div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <!-- Two Column Grid: Camera Status + Recent Alerts -->
@@ -208,6 +218,18 @@ function refreshDashboard() {
             document.getElementById('ee-inside').textContent = data.current_inside || 0;
         })
         .catch(err => console.warn('Dashboard refresh failed:', err));
+
+    // Storage gauge
+    fetch('/api/storage_usage')
+        .then(r => r.json())
+        .then(data => {
+            document.getElementById('stat-storage').textContent = data.used_mb + ' MB';
+            const pct = Math.min((data.used_mb / data.limit_mb) * 100, 100);
+            document.getElementById('storage-bar').style.width = pct + '%';
+            document.getElementById('storage-bar').style.background = 
+                pct > 80 ? 'var(--danger, #ef4444)' : 'var(--primary, #2563eb)';
+        })
+        .catch(() => {});
 }
 
 // Refresh every 5 seconds

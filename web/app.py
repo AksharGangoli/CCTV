@@ -872,22 +872,48 @@ def _register_system_routes(app):
 
     @app.route("/api/health")
     def health_check():
-        """System health check (publicly accessible)."""
+        """System health check with structured data for monitoring tools."""
         db = _get_db(app)
-        camera_mgr = getattr(app.monitor, "camera_manager", None) if app.monitor else None
-        status = {
-            "status": "healthy",
-            "timestamp": datetime.now().isoformat(),
-            "version": "2.0.0",
-            "services": {
-                "database": "up" if db else "down",
-                "camera_manager": "up" if camera_mgr else "down",
-                "monitor": "up" if app.monitor else "down",
-            },
-        }
+        config = _get_config(app)
+        
+        # Camera status
+        cameras_online = 0
+        cameras_total = 0
+        if app.monitor and hasattr(app.monitor, "camera_manager"):
+            statuses = app.monitor.camera_manager.get_all_status()
+            cameras_total = len(statuses)
+            cameras_online = sum(1 for s in statuses if s.get('connected'))
+        
+        # Storage
+        used_mb = 0
+        try:
+            for dirpath, _, files in os.walk('storage'):
+                for f in files:
+                    used_mb += os.path.getsize(os.path.join(dirpath, f))
+            if os.path.exists('recordings'):
+                for dirpath, _, files in os.walk('recordings'):
+                    for f in files:
+                        used_mb += os.path.getsize(os.path.join(dirpath, f))
+            used_mb = round(used_mb / (1024 * 1024), 1)
+        except Exception:
+            pass
+        
+        status = "healthy"
         if not db or not app.monitor:
-            status["status"] = "degraded"
-        return jsonify(status)
+            status = "degraded"
+        if cameras_online == 0 and cameras_total > 0:
+            status = "unhealthy"
+        
+        return jsonify({
+            "status": status,
+            "version": "1.2.0",
+            "cameras_online": cameras_online,
+            "cameras_total": cameras_total,
+            "storage_used_mb": used_mb,
+            "storage_limit_mb": config.get('storage', {}).get('max_storage_mb', 5000),
+            "database": "up" if db else "down",
+            "timestamp": datetime.now().isoformat()
+        })
 
     @app.route("/api/storage_usage")
     def storage_usage():
