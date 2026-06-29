@@ -678,19 +678,22 @@ For more help, see README.md
     
     # Setup logging based on quiet/verbose flags
     import logging
+    from logging.handlers import RotatingFileHandler
     
     log_format = '%(asctime)s [%(levelname)s] %(message)s'
     log_datefmt = '%H:%M:%S'
     
+    # Log file with rotation: max 10MB per file, keep last 5 files
+    log_file_handler = RotatingFileHandler(
+        'logs/cctv.log', maxBytes=10*1024*1024, backupCount=5, encoding='utf-8'
+    )
+    
     if args.quiet:
-        # Quiet mode: only errors to console, everything to log file
         logging.basicConfig(
             level=logging.ERROR,
             format=log_format,
             datefmt=log_datefmt,
-            handlers=[
-                logging.FileHandler('logs/cctv.log', encoding='utf-8'),
-            ]
+            handlers=[log_file_handler]
         )
         # Suppress Flask/Werkzeug request logging
         logging.getLogger('werkzeug').setLevel(logging.ERROR)
@@ -702,28 +705,19 @@ For more help, see README.md
         print("  Press Ctrl+C to stop\n")
         
     elif args.verbose:
-        # Verbose: everything to console + file
         logging.basicConfig(
             level=logging.DEBUG,
             format=log_format,
             datefmt=log_datefmt,
-            handlers=[
-                logging.StreamHandler(),
-                logging.FileHandler('logs/cctv.log', encoding='utf-8'),
-            ]
+            handlers=[logging.StreamHandler(), log_file_handler]
         )
     else:
-        # Normal mode: INFO to console, DEBUG to file
         logging.basicConfig(
             level=logging.INFO,
             format=log_format,
             datefmt=log_datefmt,
-            handlers=[
-                logging.StreamHandler(),
-                logging.FileHandler('logs/cctv.log', encoding='utf-8'),
-            ]
+            handlers=[logging.StreamHandler(), log_file_handler]
         )
-        # Suppress Flask request logging in normal mode
         logging.getLogger('werkzeug').setLevel(logging.WARNING)
     
     # --test-alerts: lightweight path (don't load all modules)
