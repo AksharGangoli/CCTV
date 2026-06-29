@@ -158,7 +158,7 @@ class ReportGenerator:
         try:
             d = datetime.strptime(report_date, '%Y-%m-%d')
             date_str = d.strftime('%d %b %Y (%A)')
-        except:
+        except (ValueError, TypeError):
             date_str = report_date
         
         msg = (

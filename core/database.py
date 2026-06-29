@@ -662,7 +662,7 @@ class Database:
             self.conn.commit()
             try:
                 self.cursor.execute("VACUUM")
-            except:
+            except Exception:
                 pass
         
         # Cleanup old recording files
@@ -687,7 +687,7 @@ class Database:
                     try:
                         os.remove(filepath)
                         deleted += 1
-                    except:
+                    except Exception:
                         pass
         if deleted > 0:
             print(f"[DATABASE] Deleted {deleted} old files from {directory}")

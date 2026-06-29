@@ -458,7 +458,7 @@ class CCTVMonitor:
         # Generate final report
         try:
             self.report_generator.generate_daily_report()
-        except:
+        except Exception:
             pass
         
         # Close database
